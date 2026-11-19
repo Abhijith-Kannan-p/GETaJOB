@@ -1,0 +1,44 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# node / next
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+
+# local data (raw API dumps, db volumes, eval scratch)
+backend/data/raw/
+backend/data/*.local.*
+pgdata/
+*.sqlite
+*.dump
+eval/.cache/
+
+# os / editors
+.DS_Store
+Thumbs.db
+.idea/
+
+# claude code local state
+.claude/settings.local.json
+
+# logs
+*.log

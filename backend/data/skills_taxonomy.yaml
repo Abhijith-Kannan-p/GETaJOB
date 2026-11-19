@@ -1,0 +1,404 @@
+# Skill taxonomy for rule-based extraction. ONE SKILL PER LINE. Hand-edit freely.
+#   name:    canonical name shown in the UI and stored in jobs.required_skills
+#   aliases: other spellings, matched case-insensitively on word boundaries
+#   case:    true => the NAME is matched case-sensitively (for words like Go, R, React, Spark, Excel)
+#   case_aliases: extra aliases matched case-sensitively (e.g. Spark -> Apache Spark)
+#   block:   phrases that, if they contain the match, cancel it (e.g. "Series C")
+# Matching keeps the longest non-overlapping match, so "Objective-C" beats "C".
+# After editing, re-run: python -m app.ingest.run --no-embed  (re-fetches boards; skills update, NO embedding calls,
+# because content_hash covers only the source text)
+skills:
+# --- programming languages ---
+- {name: Python, aliases: [python3]}
+- {name: Java, aliases: [java 8, java 11, java 17]}
+- {name: JavaScript, aliases: [js, es6, ecmascript]}
+- {name: TypeScript, aliases: []}
+- {name: Go, aliases: [golang], case: true, block: [Go-to, Go to market, go-to-market, Go live, Go-live, Go beyond, Go above]}
+- {name: Rust, aliases: [], case: true}
+- {name: C++, aliases: [cpp]}
+- {name: C, aliases: [], case: true, block: [Series C, C-suite, C-level, C level, C corp]}
+- {name: C#, aliases: [csharp]}
+- {name: Kotlin, aliases: []}
+- {name: Swift, aliases: [], case: true}
+- {name: Objective-C, aliases: [objc, objective c]}
+- {name: Ruby, aliases: [], case: true}
+- {name: PHP, aliases: []}
+- {name: Scala, aliases: []}
+- {name: R, aliases: [], case: true, block: [R&D]}
+- {name: MATLAB, aliases: []}
+- {name: Julia, aliases: [], case: true}
+- {name: Perl, aliases: []}
+- {name: Bash, aliases: [shell scripting, shell scripts, bash scripting]}
+- {name: PowerShell, aliases: []}
+- {name: Lua, aliases: []}
+- {name: Haskell, aliases: []}
+- {name: Elixir, aliases: []}
+- {name: Erlang, aliases: []}
+- {name: Clojure, aliases: []}
+- {name: F#, aliases: [fsharp]}
+- {name: Dart, aliases: [], case: true}
+- {name: Solidity, aliases: []}
+- {name: Assembly, aliases: [assembly language, x86 assembly], case: true}
+- {name: Verilog, aliases: [systemverilog]}
+- {name: VHDL, aliases: []}
+- {name: COBOL, aliases: []}
+- {name: Fortran, aliases: []}
+- {name: Groovy, aliases: []}
+- {name: OCaml, aliases: []}
+- {name: Zig, aliases: [], case: true}
+- {name: SQL, aliases: []}
+- {name: PL/SQL, aliases: [plsql]}
+- {name: T-SQL, aliases: [tsql, transact-sql]}
+- {name: HTML, aliases: [html5]}
+- {name: CSS, aliases: [css3]}
+- {name: Sass, aliases: [scss]}
+- {name: WebAssembly, aliases: [wasm]}
+# --- frontend ---
+- {name: React, aliases: [react.js, reactjs], case: true}
+- {name: Next.js, aliases: [nextjs]}
+- {name: Vue.js, aliases: [vue, vuejs]}
+- {name: Nuxt, aliases: [nuxt.js, nuxtjs]}
+- {name: Angular, aliases: [angularjs, angular.js], case: true}
+- {name: Svelte, aliases: [sveltekit]}
+- {name: Redux, aliases: [redux toolkit]}
+- {name: Tailwind CSS, aliases: [tailwind, tailwindcss]}
+- {name: Bootstrap, aliases: [], case: true}
+- {name: jQuery, aliases: []}
+- {name: Webpack, aliases: []}
+- {name: Vite, aliases: [], case: true}
+- {name: Storybook, aliases: []}
+- {name: Three.js, aliases: [threejs]}
+- {name: D3.js, aliases: [d3, d3js]}
+- {name: Web Accessibility, aliases: [accessibility, a11y, wcag]}
+- {name: Responsive Design, aliases: [responsive web design]}
+- {name: Figma, aliases: []}
+- {name: Material UI, aliases: [mui]}
+- {name: React Native, aliases: []}
+- {name: Flutter, aliases: []}
+- {name: Electron, aliases: [electron.js], case: true}
+- {name: WebSockets, aliases: [websocket, web sockets]}
+- {name: Server-Side Rendering, aliases: [ssr]}
+# --- backend frameworks & runtimes ---
+- {name: Node.js, aliases: [node, nodejs], block: [leaf node, node pool]}
+- {name: Express.js, aliases: [expressjs]}
+- {name: NestJS, aliases: [nest.js]}
+- {name: Deno, aliases: [], case: true}
+- {name: Django, aliases: []}
+- {name: Flask, aliases: []}
+- {name: FastAPI, aliases: []}
+- {name: Spring Boot, aliases: [spring framework, springboot]}
+- {name: Hibernate, aliases: []}
+- {name: Ruby on Rails, aliases: [rails, ror]}
+- {name: Laravel, aliases: []}
+- {name: ASP.NET, aliases: [asp.net core]}
+- {name: .NET, aliases: [dotnet, .net core, .net framework]}
+- {name: gRPC, aliases: []}
+- {name: GraphQL, aliases: [apollo graphql]}
+- {name: REST APIs, aliases: [restful, rest api, restful apis, restful services]}
+- {name: Protocol Buffers, aliases: [protobuf, protobufs]}
+- {name: OpenAPI, aliases: [swagger]}
+- {name: Microservices, aliases: [microservice, micro-services, microservice architecture]}
+- {name: Event-Driven Architecture, aliases: [event driven, event-driven]}
+- {name: Serverless, aliases: []}
+- {name: Celery, aliases: []}
+- {name: OAuth, aliases: [oauth2, oauth 2.0, openid connect, oidc]}
+- {name: JWT, aliases: [json web tokens]}
+- {name: API Design, aliases: [api development, designing apis]}
+- {name: Backend Development, aliases: [backend, back-end, server-side]}
+- {name: Frontend Development, aliases: [frontend, front-end]}
+- {name: Full-Stack Development, aliases: [full stack, full-stack, fullstack]}
+# --- mobile ---
+- {name: Android, aliases: [android sdk]}
+- {name: iOS, aliases: []}
+- {name: SwiftUI, aliases: []}
+- {name: UIKit, aliases: []}
+- {name: Jetpack Compose, aliases: []}
+- {name: Xcode, aliases: []}
+- {name: Android Studio, aliases: []}
+# --- databases & storage ---
+- {name: PostgreSQL, aliases: [postgres, psql]}
+- {name: MySQL, aliases: [mariadb]}
+- {name: SQLite, aliases: []}
+- {name: Oracle Database, aliases: [oracle db]}
+- {name: SQL Server, aliases: [mssql, microsoft sql server]}
+- {name: MongoDB, aliases: [mongo]}
+- {name: Redis, aliases: []}
+- {name: Cassandra, aliases: [apache cassandra]}
+- {name: DynamoDB, aliases: []}
+- {name: Elasticsearch, aliases: [elastic search, opensearch]}
+- {name: Neo4j, aliases: []}
+- {name: CockroachDB, aliases: []}
+- {name: ClickHouse, aliases: []}
+- {name: Snowflake, aliases: [], case: true}
+- {name: BigQuery, aliases: [big query]}
+- {name: Redshift, aliases: [amazon redshift]}
+- {name: Databricks, aliases: []}
+- {name: Apache Iceberg, aliases: [iceberg]}
+- {name: Delta Lake, aliases: []}
+- {name: Firebase, aliases: [firestore]}
+- {name: Supabase, aliases: []}
+- {name: Memcached, aliases: []}
+- {name: HBase, aliases: []}
+- {name: Vector Databases, aliases: [vector database, vector db, vector store, vector search]}
+- {name: pgvector, aliases: []}
+- {name: Pinecone, aliases: []}
+- {name: FAISS, aliases: []}
+- {name: NoSQL, aliases: []}
+- {name: Data Modeling, aliases: [data modelling, schema design, database design]}
+- {name: Query Optimization, aliases: [sql optimization, query tuning]}
+- {name: SQLAlchemy, aliases: []}
+- {name: Prisma, aliases: []}
+# --- data engineering ---
+- {name: Apache Spark, aliases: [pyspark, spark sql], case_aliases: [Spark]}
+- {name: Apache Kafka, aliases: [kafka, kafka streams]}
+- {name: Apache Flink, aliases: [flink]}
+- {name: Apache Airflow, aliases: [airflow]}
+- {name: dbt, aliases: [], case: true}
+- {name: Hadoop, aliases: [hdfs, mapreduce]}
+- {name: Hive, aliases: [apache hive], case: true}
+- {name: Trino, aliases: [presto]}
+- {name: Apache Beam, aliases: [], case: false}
+- {name: Dagster, aliases: []}
+- {name: Fivetran, aliases: []}
+- {name: ETL, aliases: [elt, etl pipelines, data pipelines, data pipeline]}
+- {name: Data Warehousing, aliases: [data warehouse, data warehouses]}
+- {name: Data Lakes, aliases: [data lake, lakehouse]}
+- {name: Stream Processing, aliases: [streaming data, real-time data]}
+- {name: Batch Processing, aliases: []}
+- {name: Pub/Sub, aliases: [pubsub]}
+- {name: RabbitMQ, aliases: []}
+- {name: Amazon Kinesis, aliases: [kinesis]}
+- {name: Parquet, aliases: []}
+- {name: Data Quality, aliases: [data validation]}
+- {name: Data Governance, aliases: []}
+# --- data analysis / BI ---
+- {name: pandas, aliases: []}
+- {name: NumPy, aliases: []}
+- {name: SciPy, aliases: []}
+- {name: Polars, aliases: []}
+- {name: Jupyter, aliases: [jupyter notebooks, jupyter notebook]}
+- {name: Excel, aliases: [microsoft excel, ms excel], case: true}
+- {name: Google Sheets, aliases: []}
+- {name: Tableau, aliases: []}
+- {name: Power BI, aliases: [powerbi]}
+- {name: Looker, aliases: [lookml], case: true}
+- {name: Metabase, aliases: []}
+- {name: matplotlib, aliases: []}
+- {name: seaborn, aliases: []}
+- {name: Plotly, aliases: []}
+- {name: Statistics, aliases: [statistical analysis, statistical modeling, statistical modelling, applied statistics]}
+- {name: Probability, aliases: []}
+- {name: A/B Testing, aliases: [ab testing, a/b tests, experimentation, controlled experiments]}
+- {name: Causal Inference, aliases: []}
+- {name: Hypothesis Testing, aliases: []}
+- {name: Bayesian Statistics, aliases: [bayesian methods, bayesian inference]}
+- {name: Time Series Analysis, aliases: [time series, forecasting]}
+- {name: Data Visualization, aliases: [data visualisation, dashboards, dashboarding]}
+- {name: Data Analysis, aliases: [data analytics]}
+- {name: Product Analytics, aliases: [amplitude, mixpanel]}
+- {name: Econometrics, aliases: []}
+- {name: Linear Algebra, aliases: []}
+- {name: Calculus, aliases: []}
+- {name: Mathematical Optimization, aliases: [convex optimization, linear programming]}
+# --- ML / AI ---
+- {name: Machine Learning, aliases: [ml]}
+- {name: Deep Learning, aliases: [deep neural networks, neural networks]}
+- {name: PyTorch, aliases: []}
+- {name: TensorFlow, aliases: []}
+- {name: Keras, aliases: []}
+- {name: JAX, aliases: [], case: true}
+- {name: scikit-learn, aliases: [sklearn, scikit learn]}
+- {name: XGBoost, aliases: []}
+- {name: LightGBM, aliases: []}
+- {name: Hugging Face, aliases: [huggingface]}
+- {name: Transformers, aliases: [transformer models, transformer architecture], case: true}
+- {name: NLP, aliases: [natural language processing]}
+- {name: Computer Vision, aliases: []}
+- {name: OpenCV, aliases: []}
+- {name: LLMs, aliases: [llm, large language models, large language model, foundation models, generative ai, genai, gen ai]}
+- {name: Prompt Engineering, aliases: []}
+- {name: RAG, aliases: [retrieval-augmented generation, retrieval augmented generation]}
+- {name: LangChain, aliases: []}
+- {name: LlamaIndex, aliases: []}
+- {name: LangGraph, aliases: []}
+- {name: AI Agents, aliases: [llm agents, agentic systems, autonomous agents, function calling]}
+- {name: Fine-Tuning, aliases: [fine tuning, finetuning, lora, peft, rlhf]}
+- {name: Embeddings, aliases: [embedding models, vector embeddings, text embeddings]}
+- {name: LLM Evaluation, aliases: [llm evals, model evaluation]}
+- {name: Reinforcement Learning, aliases: [deep reinforcement learning]}
+- {name: Recommender Systems, aliases: [recommendation systems, recommendation engines, recommenders, recsys]}
+- {name: Information Retrieval, aliases: [search ranking, learning to rank, ranking systems, semantic search]}
+- {name: Speech Recognition, aliases: [asr, speech processing]}
+- {name: Generative Models, aliases: [diffusion models, gans]}
+- {name: MLOps, aliases: [ml ops, ml infrastructure, ml platform, model deployment, model serving]}
+- {name: MLflow, aliases: []}
+- {name: Kubeflow, aliases: []}
+- {name: Weights & Biases, aliases: [wandb]}
+- {name: ONNX, aliases: []}
+- {name: TensorRT, aliases: []}
+- {name: CUDA, aliases: [gpu programming]}
+- {name: Triton, aliases: [triton inference server], case: true}
+- {name: vLLM, aliases: []}
+- {name: Distributed Training, aliases: [multi-gpu training, model parallelism, data parallelism]}
+- {name: Feature Engineering, aliases: []}
+- {name: Anomaly Detection, aliases: [fraud detection]}
+- {name: Clustering, aliases: [k-means, kmeans]}
+- {name: Data Science, aliases: []}
+# --- cloud ---
+- {name: AWS, aliases: [amazon web services]}
+- {name: GCP, aliases: [google cloud, google cloud platform]}
+- {name: Azure, aliases: [microsoft azure]}
+- {name: AWS Lambda, aliases: [lambda functions]}
+- {name: Amazon S3, aliases: [s3]}
+- {name: Amazon EC2, aliases: [ec2]}
+- {name: Amazon ECS, aliases: [fargate]}
+- {name: Amazon EKS, aliases: [eks]}
+- {name: Google Kubernetes Engine, aliases: [gke]}
+- {name: Cloud Run, aliases: [google cloud run]}
+- {name: Amazon RDS, aliases: [aurora]}
+- {name: Amazon SQS, aliases: [sqs]}
+- {name: AWS IAM, aliases: []}
+- {name: AWS CDK, aliases: [cloudformation]}
+- {name: Vertex AI, aliases: []}
+- {name: SageMaker, aliases: [amazon sagemaker]}
+- {name: Cloudflare Workers, aliases: []}
+- {name: Heroku, aliases: []}
+- {name: Cloud Computing, aliases: [cloud infrastructure, cloud platforms, public cloud, cloud-native, cloud native]}
+# --- devops / infra ---
+- {name: Docker, aliases: [containerization, dockerfile]}
+- {name: Containers, aliases: [containerized, container orchestration]}
+- {name: Kubernetes, aliases: [k8s, kubectl]}
+- {name: Helm, aliases: [helm charts], case: true}
+- {name: Terraform, aliases: [opentofu]}
+- {name: Pulumi, aliases: []}
+- {name: Ansible, aliases: []}
+- {name: Chef, aliases: [], case: true}
+- {name: Puppet, aliases: [], case: true}
+- {name: Infrastructure as Code, aliases: [infrastructure-as-code]}
+- {name: CI/CD, aliases: [continuous integration, continuous delivery, continuous deployment, ci/cd pipelines]}
+- {name: GitHub Actions, aliases: []}
+- {name: Jenkins, aliases: []}
+- {name: GitLab CI, aliases: [gitlab ci/cd]}
+- {name: CircleCI, aliases: []}
+- {name: Argo CD, aliases: [argocd]}
+- {name: Bazel, aliases: []}
+- {name: Gradle, aliases: []}
+- {name: Maven, aliases: []}
+- {name: Linux, aliases: [unix, ubuntu, debian, rhel, centos]}
+- {name: Nginx, aliases: []}
+- {name: Envoy, aliases: [], case: true}
+- {name: Istio, aliases: [service mesh]}
+- {name: Prometheus, aliases: []}
+- {name: Grafana, aliases: []}
+- {name: Datadog, aliases: []}
+- {name: OpenTelemetry, aliases: [otel]}
+- {name: Observability, aliases: [monitoring and alerting, logging and monitoring]}
+- {name: Splunk, aliases: []}
+- {name: New Relic, aliases: [newrelic]}
+- {name: SRE, aliases: [site reliability engineering]}
+- {name: Incident Response, aliases: [on-call, incident management]}
+- {name: Networking, aliases: [computer networking, network protocols]}
+- {name: TCP/IP, aliases: [tcp, udp]}
+- {name: HTTP, aliases: [http/2]}
+- {name: DNS, aliases: []}
+- {name: Load Balancing, aliases: [load balancers]}
+- {name: CDN, aliases: [cdns, content delivery network]}
+- {name: Performance Optimization, aliases: [performance tuning, profiling, latency optimization]}
+- {name: Capacity Planning, aliases: []}
+- {name: Virtualization, aliases: [vmware, kvm, hypervisor, hypervisors]}
+- {name: Release Engineering, aliases: [build systems, release management]}
+# --- testing / quality ---
+- {name: Unit Testing, aliases: [unit tests, automated testing, test automation, automated tests]}
+- {name: Integration Testing, aliases: [integration tests, end-to-end testing, e2e testing]}
+- {name: Test-Driven Development, aliases: [tdd]}
+- {name: pytest, aliases: []}
+- {name: JUnit, aliases: []}
+- {name: Jest, aliases: [], case: true}
+- {name: Cypress, aliases: []}
+- {name: Playwright, aliases: []}
+- {name: Selenium, aliases: [webdriver]}
+- {name: Appium, aliases: []}
+- {name: Load Testing, aliases: [performance testing, jmeter, locust]}
+- {name: QA, aliases: [quality assurance, manual testing], case: true}
+- {name: Code Review, aliases: [code reviews]}
+# --- tools / practice ---
+- {name: Git, aliases: [version control], case: true}
+- {name: GitHub, aliases: [], case: true}
+- {name: Jira, aliases: []}
+- {name: Agile, aliases: [scrum, kanban, agile methodologies], case: true}
+- {name: Debugging, aliases: [troubleshooting, root cause analysis]}
+- {name: Technical Writing, aliases: [technical documentation]}
+- {name: Open Source, aliases: [open-source contributions, open source contributions]}
+- {name: Salesforce, aliases: []}
+- {name: SAP, aliases: [], case: true}
+- {name: ServiceNow, aliases: []}
+# --- CS fundamentals ---
+- {name: Data Structures, aliases: [data structures and algorithms, dsa]}
+- {name: Algorithms, aliases: [algorithm design]}
+- {name: System Design, aliases: [systems design, software architecture]}
+- {name: Distributed Systems, aliases: [distributed computing, large-scale distributed systems]}
+- {name: Object-Oriented Programming, aliases: [oop, object oriented, object-oriented design]}
+- {name: Functional Programming, aliases: []}
+- {name: Design Patterns, aliases: [software design patterns]}
+- {name: Concurrency, aliases: [multithreading, multi-threading, parallel programming, asynchronous programming]}
+- {name: Operating Systems, aliases: [linux kernel, kernel development]}
+- {name: Compilers, aliases: [compiler design, llvm]}
+- {name: Computer Architecture, aliases: []}
+- {name: Database Internals, aliases: [storage engines]}
+- {name: Caching, aliases: [caching strategies]}
+- {name: Scalability, aliases: [high availability, fault tolerance, fault-tolerant]}
+- {name: Consensus Algorithms, aliases: [raft, paxos]}
+- {name: Computer Science Degree, aliases: [degree in computer science, bachelor's in computer science, bs in computer science, b.tech, btech, computer science or related field, computer science or a related field]}
+- {name: Graph Algorithms, aliases: [graph theory]}
+- {name: Scientific Computing, aliases: [numerical methods, numerical computing]}
+# --- security ---
+- {name: Security Engineering, aliases: [cybersecurity, cyber security, information security, infosec, application security, appsec]}
+- {name: Cryptography, aliases: [encryption, pki]}
+- {name: TLS, aliases: [ssl/tls]}
+- {name: Network Security, aliases: [firewalls, zero trust]}
+- {name: Penetration Testing, aliases: [pentesting, pen testing, ethical hacking]}
+- {name: Threat Modeling, aliases: [threat modelling]}
+- {name: Vulnerability Management, aliases: [vulnerability assessment]}
+- {name: SIEM, aliases: []}
+- {name: Identity and Access Management, aliases: [identity management, sso, saml]}
+- {name: Cloud Security, aliases: []}
+- {name: Secure Coding, aliases: [owasp, secure software development]}
+- {name: Reverse Engineering, aliases: [malware analysis]}
+- {name: Detection Engineering, aliases: [threat detection, threat hunting]}
+- {name: Compliance, aliases: [soc 2, soc2, iso 27001, gdpr, hipaa, pci dss, pci-dss], case: true}
+- {name: Blockchain, aliases: [web3, smart contracts, ethereum]}
+# --- embedded / hardware ---
+- {name: Embedded Systems, aliases: [embedded software, embedded c, firmware]}
+- {name: RTOS, aliases: [freertos, real-time operating systems]}
+- {name: Microcontrollers, aliases: [arm cortex, stm32, arduino, esp32]}
+- {name: FPGA, aliases: [fpgas]}
+- {name: PCB Design, aliases: [altium]}
+- {name: ROS, aliases: [ros2, robot operating system], case: true}
+- {name: Robotics, aliases: []}
+- {name: Computer Graphics, aliases: [opengl, vulkan, directx, shaders]}
+- {name: Unity, aliases: [unity3d], case: true}
+- {name: Unreal Engine, aliases: []}
+- {name: Signal Processing, aliases: [dsp, digital signal processing]}
+- {name: Control Systems, aliases: [control theory]}
+- {name: Sensor Fusion, aliases: [kalman filter, kalman filters]}
+- {name: SLAM, aliases: []}
+- {name: Autonomous Vehicles, aliases: [self-driving, autonomous driving]}
+- {name: IoT, aliases: [internet of things]}
+- {name: Device Drivers, aliases: [linux device drivers]}
+- {name: High-Performance Computing, aliases: [hpc, mpi, openmp]}
+# --- product / domain (tech-adjacent) ---
+- {name: Product Management, aliases: [product roadmap]}
+- {name: UX Design, aliases: [user experience, ui/ux, ux research, user research]}
+- {name: Prototyping, aliases: []}
+- {name: Payment Systems, aliases: [payment processing, payments infrastructure]}
+- {name: Search Infrastructure, aliases: [lucene, solr]}
+- {name: GIS, aliases: [postgis, geospatial]}
+- {name: Ad Tech, aliases: [adtech, advertising systems]}
+- {name: FHIR, aliases: [hl7]}
+- {name: Trading Systems, aliases: [low-latency trading, algorithmic trading, market data]}
+- {name: Quantitative Analysis, aliases: [quantitative research]}
+# --- soft skills (kept separate; the ranker down-weights them via IDF since they're everywhere) ---
+- {name: Communication, aliases: [communication skills, written and verbal communication, verbal communication]}
+- {name: Collaboration, aliases: [cross-functional, cross functional, teamwork]}
+- {name: Mentorship, aliases: [mentoring]}
+- {name: Problem Solving, aliases: [problem-solving, analytical skills]}

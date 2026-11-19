@@ -1,0 +1,11 @@
+# UNVERIFIED guesses at public board slugs. `python -m app.ingest.verify_boards` calls each API,
+# drops 404/empty boards, and writes data/companies.yaml from what the APIs actually return.
+greenhouse: [stripe, databricks, figma, discord, cloudflare, gitlab, coinbase, robinhood, dropbox, airtable,
+  mongodb, elastic, twilio, datadog, okta, samsara, gusto, asana, brex, instacart, lyft, pinterest, reddit,
+  scaleai, anthropic, postman, phonepe, browserstack, groww, razorpay, sharechat, hackerrank, druva,
+  innovaccer, rubrik, nutanix, purestorage, confluent, hashicorp, grafanalabs, vercel, clickhouse,
+  cockroachlabs, celonis, toast, sprinklr, zscaler, thoughtspot, chargebee, freshworks, uipath, airbnb,
+  hubspotjobs, squarespace, duolingo, affirm, sofi, mercury, rippling, deliveroo, wise, monzo, intercom]
+lever: [palantir, spotify, plaid, netflix, cred, meesho, upstox, paytm, swiggy, jupiter, mindtickle, gojek,
+  kraken, outreach, whatnot, zeta, dream11, slice, cohere, mistral, sardine, highspotinc, wealthsimple,
+  binance, attentive, nielseniq, shieldai, anyscale, zoox, ethos]

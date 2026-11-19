@@ -1,0 +1,18 @@
+# Local Postgres only (pg17 + pgvector, same major as Neon). Backend runs from backend/.venv.
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: getajob
+      POSTGRES_PASSWORD: getajob
+      POSTGRES_DB: getajob
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U getajob"]
+      interval: 2s
+      retries: 20
+volumes:
+  pgdata:
