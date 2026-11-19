@@ -1,0 +1,16 @@
+# Ranker weights. score = sum(weight * term), every term is in [0, 1], weights sum to 1.
+# Edit freely; the API returns these with every ranked result so the UI can show the breakdown.
+weights:
+  semantic: 0.35    # cosine(profile embedding, job embedding), min-max normalised within the candidate pool
+  keyword: 0.10     # Postgres ts_rank_cd of the profile text, divided by the pool maximum
+  skills: 0.30      # IDF-weighted share of the job's skills that the profile has (required > preferred)
+  seniority: 0.15   # fit between the job's level and the levels the student wants
+  location: 0.05    # remote / preferred-location fit
+  recency: 0.05     # 0.5 ** (age_days / half_life)
+
+skill_weight:
+  required: 1.0     # multiplier on IDF for a skill in the job's Requirements section
+  preferred: 0.5    # multiplier for Nice-to-have / responsibilities skills
+
+recency_half_life_days: 30
+pool_size: 200      # candidates retrieved by hybrid search, then ranked; Why-Not-Me simulates over this pool

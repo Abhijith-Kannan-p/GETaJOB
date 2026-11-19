@@ -1,12 +1,14 @@
 # GETaJOB
 
 Job matching for students over **real open postings**, with a transparent ranker and a signature
-feature, **Why-Not-Me**: for any job it simulates the real ranker with extra skills added
-("adding Docker moves you from rank 41 to rank 9 for 12 jobs").
+feature, **Why-Not-Me**: for any job it simulates the real ranker with extra skills added. A real output,
+on the 150-job fixture snapshot for a profile with Python, SQL, pandas, Git and JavaScript targeting data/backend
+internships: *"Data Science Intern: adding NumPy, R and Keras moves it from #41 to #13 (about 70 h, my
+estimates)."* These are the ranker's own numbers, not a hiring prediction.
 
-> Status: slice 1 of 7 (ingestion, skill extraction, hybrid search, minimal UI). The ranker,
-> Why-Not-Me, the agent, evals and deployment come in later slices. This README is
-> extended as each lands; nothing below describes a feature that does not exist yet.
+> Status: slices 1–3 of 7 (ingestion and hybrid search; free-tier deploy; ranker and Why-Not-Me).
+> The agent, evals and the remaining hardening come in later slices. Nothing below describes a feature
+> that does not exist yet.
 
 ## Data sources
 
@@ -49,6 +51,48 @@ Postgres + pgvector: HNSW (cosine) + GIN full-text; one SQL query fuses both wit
   250) of the daily embedding requests; the reserve is kept for live search/profile embeddings. Those are
   cached in Postgres by hash of model|dim|task|text, so a repeated query or an unchanged profile never
   costs a second call. When the quota is gone, search falls back to full-text only with a banner.
+
+## Ranking and Why-Not-Me
+
+**Ranker** ([scorer.py](backend/app/rank/scorer.py)): one pure, deterministic function used by every
+endpoint. Candidates are the top 200 jobs from the hybrid query for the profile text; each gets
+
+```
+score = 0.35·semantic + 0.10·keyword + 0.30·skills + 0.15·seniority + 0.05·location + 0.05·recency
+```
+
+Every term is in [0, 1]; the weights live in `backend/data/ranking.yaml`, and every result carries the
+per-term breakdown, which the UI shows as a stacked bar.
+- `skills` = IDF-weighted share of the job's skills that the profile has (required ×1.0, preferred ×0.5).
+- `semantic` is min-max normalised within the pool, and `keyword` is divided by the pool maximum.
+- Ties break by job id.
+
+**Why-Not-Me** ([engine.py](backend/app/whynot/engine.py)) re-scores the same pool with skills added:
+- **Gap:** the job's missing skills, with their weight and share of that job's skill weight, plus your rank.
+- **Fixes:** each missing skill that appears in at least 3 pool jobs is simulated. Results report jobs entering
+  your top 10/20, the mean rank change, and the reciprocal-rank gain over the jobs that list the skill. That
+  gain is not summed over the whole pool, because Σ 1/rank is the same for every ordering, so the total would
+  always be zero.
+- **Plan:** a greedy 3-step plan by gain per hour of effort.
+  - Overall view: pool-wide gain.
+  - Job view: that job's own missing skills only, taking a step only if it strictly improves that job's rank.
+  - Hours come from `skills_effort.yaml` and are **my estimates**.
+
+**What the simulation holds fixed:** the profile embedding, the retrieved pool, and the semantic and
+keyword terms. Only the skill-overlap term changes, because nothing else in the score depends on skills.
+
+**Guarantees (property-tested with Hypothesis over random pools and profiles):**
+- Adding a skill never lowers any job's skill-overlap.
+- No other term changes.
+- Simulated scores and ranks are **bit-identical** to re-running the ranker on the extended profile.
+- Results don't depend on pool order.
+- A job-focused plan never leaves that job worse off.
+
+**Known limitations:**
+- Postings often list alternatives ("at least one of Go, C++, Rust or Java"). The extractor marks all of them
+  as required, so the skill-overlap share underrates candidates who know one of them.
+- Ranks are relative to a 200-job pool for *this* profile. Real re-retrieval after learning a skill could
+  differ, because the semantic term would also move.
 
 ## Local development (Windows PowerShell)
 

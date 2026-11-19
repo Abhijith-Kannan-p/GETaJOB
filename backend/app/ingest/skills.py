@@ -74,6 +74,20 @@ class Taxonomy:
         alts = "|".join(re.escape(a) for a in sorted(aliases, key=len, reverse=True))
         return re.compile(f"{_LEFT}(?:{alts}){_RIGHT}", flags)
 
+    def canonical(self, text: str) -> str | None:
+        """Map a user-typed chip ("js", "k8s", "Postgres") to the taxonomy name, or None if unknown."""
+        t = " ".join(text.split())
+        if not t:
+            return None
+        if t in self._cs:
+            return self._cs[t]
+        if t.lower() in self._ci:
+            return self._ci[t.lower()]
+        for n in self.names:  # case-sensitive names typed in another case ("REACT" -> React)
+            if n.lower() == t.lower():
+                return n
+        return None
+
     @property
     def pattern_count(self) -> int:
         return len(self._ci) + len(self._cs)

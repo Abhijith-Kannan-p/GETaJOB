@@ -322,8 +322,7 @@ skills:
 - {name: QA, aliases: [quality assurance, manual testing], case: true}
 - {name: Code Review, aliases: [code reviews]}
 # --- tools / practice ---
-- {name: Git, aliases: [version control], case: true}
-- {name: GitHub, aliases: [], case: true}
+- {name: Git, aliases: [version control, github], case: true}
 - {name: Jira, aliases: []}
 - {name: Agile, aliases: [scrum, kanban, agile methodologies], case: true}
 - {name: Debugging, aliases: [troubleshooting, root cause analysis]}

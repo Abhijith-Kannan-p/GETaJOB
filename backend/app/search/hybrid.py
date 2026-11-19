@@ -51,8 +51,10 @@ fused AS (
 )
 SELECT j.id, j.source, j.company, j.title, j.location, j.is_remote, j.seniority, j.required_skills,
        j.preferred_skills, j.url, j.posted_at, left(j.description, 400) AS snippet,
-       f.rrf, f.sim, f.kw, f.vec_rank, f.fts_rank
-FROM fused f JOIN jobs j ON j.id = f.id
+       f.rrf, f.sim, f.kw, f.vec_rank, f.fts_rank,
+       -- the ranker needs BOTH signals for every pooled job, not just the side that retrieved it
+       {sim_all} AS sim_all, ts_rank_cd(j.tsv, q.tsq, 32) AS kw_all
+FROM fused f JOIN jobs j ON j.id = f.id CROSS JOIN q
 ORDER BY f.rrf DESC, j.id
 LIMIT %(limit)s
 """
@@ -76,7 +78,12 @@ def _filters_sql(f: SearchFilters, alias: str = "") -> str:
 
 def hybrid_sql(has_vector: bool, f: SearchFilters) -> str:
     vec = _VEC.format(filters=_filters_sql(f)) if has_vector else _NO_VEC
-    return _SQL.format(vec=vec, filters=_filters_sql(f, "j"))
+    sim_all = (
+        "CASE WHEN j.embedding IS NULL THEN NULL ELSE 1 - (j.embedding <=> %(qvec)s) END"
+        if has_vector
+        else "NULL::float8"
+    )
+    return _SQL.format(vec=vec, filters=_filters_sql(f, "j"), sim_all=sim_all)
 
 
 def hybrid_search(

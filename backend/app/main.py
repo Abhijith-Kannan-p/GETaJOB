@@ -11,11 +11,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app import logs
+from app.api.limits import limiter
+from app.api.rank import router as rank_router
+from app.api.serialize import job_out
 from app.config import BACKEND_DIR, get_settings
 from app.db import close_pool
 from app.db import conn as db_conn
@@ -28,15 +29,6 @@ EVAL_RESULTS = BACKEND_DIR.parent / "eval" / "results.json"
 SENIORITIES = {"intern", "new_grad", "entry", "mid", "senior", "unknown"}
 
 
-def _client_ip(request: Request) -> str:
-    # Render/Vercel put the real client first in X-Forwarded-For
-    fwd = request.headers.get("x-forwarded-for")
-    return fwd.split(",")[0].strip() if fwd else get_remote_address(request)
-
-
-limiter = Limiter(key_func=_client_ip)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     s = get_settings()
@@ -47,16 +39,26 @@ async def lifespan(app: FastAPI):
     except Exception:  # noqa: BLE001 - /health must still come up so the deploy can be diagnosed
         log.exception("migration failed at startup")
     app.state.embedder = get_embedder()
-    log.info("startup", extra={"semantic": app.state.embedder is not None, "mock_llm": s.mock_llm})
+    log.info(
+        "startup",
+        extra={
+            "semantic": app.state.embedder is not None,
+            "mock_llm": s.mock_llm,
+            "cors_origins": s.cors_origin_list,
+            "cors_origin_regex": s.cors_origin_regex,
+        },
+    )
     yield
     close_pool()
 
 
 app = FastAPI(title="GETaJOB API", lifespan=lifespan)
 app.state.limiter = limiter
+app.include_router(rank_router)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in get_settings().cors_origins.split(",") if o.strip()],
+    allow_origins=get_settings().cors_origin_list,
+    allow_origin_regex=get_settings().cors_origin_regex or None,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["*"],
     expose_headers=["X-Request-ID"],
@@ -150,7 +152,7 @@ def search(
         "query": q,
         "degraded": degraded,
         "took_ms": round((time.perf_counter() - t0) * 1000, 1),
-        "results": [_job_out(r) for r in rows],
+        "results": [job_out(r) for r in rows],
     }
 
 
@@ -165,31 +167,4 @@ def get_job(job_id: int):
         ).fetchone()
     if r is None:
         raise HTTPException(404, "job not found")
-    return {**_job_out(r), "description": r["description"], "closed": r["closed_at"] is not None}
-
-
-def _job_out(r: dict) -> dict:
-    out = {
-        "id": r["id"],
-        "title": r["title"],
-        "company": r["company"],
-        "location": r["location"],
-        "is_remote": r["is_remote"],
-        "seniority": r["seniority"],
-        "required_skills": r["required_skills"],
-        "preferred_skills": r["preferred_skills"],
-        "url": r["url"],
-        "posted_at": r["posted_at"].isoformat() if r.get("posted_at") else None,
-        "source": r["source"],
-        "attribution": f"via {'Greenhouse' if r['source'] == 'greenhouse' else 'Lever'} job board API",
-    }
-    if "rrf" in r:
-        out["snippet"] = r["snippet"]
-        out["retrieval"] = {
-            "rrf": round(float(r["rrf"]), 5),
-            "semantic_sim": None if r["sim"] is None else round(float(r["sim"]), 4),
-            "keyword": None if r["kw"] is None else round(float(r["kw"]), 4),
-            "vec_rank": r["vec_rank"],
-            "fts_rank": r["fts_rank"],
-        }
-    return out
+    return {**job_out(r), "description": r["description"], "closed": r["closed_at"] is not None}

@@ -44,6 +44,19 @@ class Settings(BaseSettings):
 
     mock_llm: bool = False
     cors_origins: str = "http://localhost:3000"
+    # optional regex for extra origins, e.g. this project's per-deployment Vercel URLs
+    cors_origin_regex: str | None = None
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Browsers send origins with no path or trailing slash; normalise what was typed in a dashboard."""
+        out = []
+        for o in self.cors_origins.split(","):
+            o = o.strip().strip("'\"").rstrip("/")
+            if o:
+                out.append(o)
+        return out
+
     log_level: str = "INFO"
 
     # ingest: start at ~1,000 active jobs; embeddings fill in over nightly batches within the ingest budget

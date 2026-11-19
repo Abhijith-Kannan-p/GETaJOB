@@ -1,0 +1,128 @@
+# Effort to reach working, portfolio-level familiarity with a skill. MY ESTIMATES, not measured data:
+# the UI labels them "my estimate". Edit freely. Unlisted skills use default_tier.
+note: "Rough hour estimates for a student to reach working familiarity; the author's estimates, not measured."
+tiers:
+  low: 10
+  medium: 30
+  high: 80
+default_tier: medium
+
+# Not suggested as "fixes" (they still count for matching): not learnable in hours, too vague to act on, or
+# working habits picked up on the job rather than learning-plan items.
+not_suggestible: [Computer Science Degree, Communication, Collaboration, Mentorship, Problem Solving,
+  Code Review, Debugging, Agile, Jira, Technical Writing]
+
+skills:
+  # low: tools and narrow technologies you can use productively within a week of evenings
+  Git: low
+  GitHub Actions: low
+  Docker: low
+  REST APIs: low
+  JWT: low
+  Jira: low
+  Agile: low
+  HTML: low
+  CSS: low
+  Tailwind CSS: low
+  Bash: low
+  Linux: low
+  SQL: low
+  SQLite: low
+  pandas: low
+  NumPy: low
+  matplotlib: low
+  Jupyter: low
+  Excel: low
+  Google Sheets: low
+  pytest: low
+  Jest: low
+  Unit Testing: low
+  Code Review: low
+  Debugging: low
+  OpenAPI: low
+  Redis: low
+  Vite: low
+  Webpack: low
+  Prompt Engineering: low
+  Heroku: low
+  CI/CD: low
+  Nginx: low
+  Tableau: low
+  Power BI: low
+  Looker: low
+  dbt: low
+  # medium: a language framework or platform; a few weeks of focused projects
+  Python: medium
+  JavaScript: medium
+  TypeScript: medium
+  Java: medium
+  Go: medium
+  Kotlin: medium
+  Swift: medium
+  React: medium
+  Next.js: medium
+  Vue.js: medium
+  Angular: medium
+  Node.js: medium
+  Express.js: medium
+  Django: medium
+  Flask: medium
+  FastAPI: medium
+  Spring Boot: medium
+  PostgreSQL: medium
+  MySQL: medium
+  MongoDB: medium
+  GraphQL: medium
+  gRPC: medium
+  AWS: medium
+  GCP: medium
+  Azure: medium
+  Kubernetes: medium
+  Terraform: medium
+  Apache Airflow: medium
+  Apache Kafka: medium
+  Apache Spark: medium
+  scikit-learn: medium
+  PyTorch: medium
+  TensorFlow: medium
+  LLMs: medium
+  RAG: medium
+  LangChain: medium
+  Embeddings: medium
+  Data Visualization: medium
+  Statistics: medium
+  A/B Testing: medium
+  Android: medium
+  iOS: medium
+  React Native: medium
+  Flutter: medium
+  Microservices: medium
+  Data Structures: medium
+  Algorithms: medium
+  Object-Oriented Programming: medium
+  ETL: medium
+  Data Modeling: medium
+  Observability: medium
+  Security Engineering: medium
+  # high: deep foundations or broad engineering areas; months, not weeks
+  C++: high
+  Rust: high
+  C: high
+  Scala: high
+  Machine Learning: high
+  Deep Learning: high
+  NLP: high
+  Computer Vision: high
+  Reinforcement Learning: high
+  Distributed Systems: high
+  System Design: high
+  Operating Systems: high
+  Compilers: high
+  Computer Architecture: high
+  Embedded Systems: high
+  CUDA: high
+  Cryptography: high
+  Recommender Systems: high
+  Information Retrieval: high
+  MLOps: high
+  Data Science: high

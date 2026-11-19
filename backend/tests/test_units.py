@@ -48,3 +48,18 @@ def test_unset_limit_uses_conservative_default(caplog):
     s = Settings(llm_rpm=None, llm_rpd=None)
     assert s.limit("llm_rpm") == 5 and s.limit("llm_rpd") == 100
     assert "conservative default" in caplog.text
+
+
+def test_cors_origins_are_normalised():
+    s = Settings(cors_origins=' "https://a.vercel.app/" , http://localhost:3000/,, ')
+    assert s.cors_origin_list == ["https://a.vercel.app", "http://localhost:3000"]
+
+
+def test_cors_regex_allows_deployment_urls():
+    import re
+
+    rx = r"^https://frontend-eight-sigma(-[a-z0-9]+)*\.vercel\.app$"
+    assert re.match(rx, "https://frontend-eight-sigma-mj8ezgzzva.vercel.app")
+    assert re.match(rx, "https://frontend-eight-sigma.vercel.app")
+    assert not re.match(rx, "https://frontend-eight-sigma.vercel.app.evil.com")
+    assert not re.match(rx, "https://evil-frontend-eight-sigma.vercel.app")

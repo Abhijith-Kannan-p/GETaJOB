@@ -47,7 +47,12 @@ export default function SearchClient() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">GETaJOB</h1>
+      <div className="flex items-baseline justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">GETaJOB</h1>
+        <a href="/app" className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400">
+          Match my profile →
+        </a>
+      </div>
       <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
         Hybrid semantic + keyword search over real open postings from public Greenhouse and Lever job boards.
       </p>

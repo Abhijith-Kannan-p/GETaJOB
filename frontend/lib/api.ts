@@ -77,3 +77,94 @@ export const api = {
   },
   stats: (signal?: AbortSignal) => get<Stats>("/api/stats", signal),
 };
+
+// ---------- ranking + Why-Not-Me ----------
+export type Level = "intern" | "new_grad" | "entry" | "mid" | "senior" | "unknown";
+export type ProfileIn = {
+  skills: string[];
+  target_roles: string[];
+  seniority: Level[];
+  remote_ok: boolean;
+  locations: string[];
+  free_text: string;
+};
+export type Term = "semantic" | "keyword" | "skills" | "seniority" | "location" | "recency";
+export type Breakdown = Record<Term, { value: number; weight: number; contribution: number }>;
+export type RankedJob = Job & {
+  rank: number;
+  score: number;
+  breakdown: Breakdown;
+  matched_skills: string[];
+  missing_required: string[];
+};
+type Meta = {
+  degraded: "fulltext_only" | null;
+  pool_size: number;
+  profile: { skills: string[]; unknown_skills: string[] };
+};
+export type RankResponse = Meta & { weights: Record<Term, number>; results: RankedJob[] };
+export type Effect = {
+  skill: string;
+  jobs_with_skill: number;
+  entering_top10: number;
+  entering_top20: number;
+  mean_rank_change: number;
+  rr_gain: number;
+  effort_tier: string;
+  effort_hours: number;
+  gain_per_hour: number;
+  job_rank: { before: number; after: number } | null;
+};
+export type Plan = {
+  steps: { step: number; skill: string; effort_tier: string; effort_hours: number; effect: Effect }[];
+  cumulative: {
+    affected_jobs: number;
+    median_rank_before: number | null;
+    median_rank_after: number | null;
+    entering_top10: number;
+    entering_top20: number;
+    total_hours: number;
+    job_rank: { before: number; after: number } | null;
+  };
+};
+export type WhyNotResponse = Meta & {
+  disclaimer: string;
+  effort_note: string;
+  job?: Job;
+  rank?: number;
+  score?: number;
+  breakdown?: Breakdown;
+  matched?: string[];
+  missing?: { skill: string; kind: "required" | "preferred"; weight: number; share: number }[];
+  fixes: Effect[];
+  plan: Plan;
+};
+
+async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      signal,
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+    throw new ApiError(0, "Can't reach the server. If it was asleep, try again in a few seconds.");
+  }
+  if (!res.ok) {
+    const b = await res.json().catch(() => ({}));
+    const msg = typeof b.detail === "string" ? b.detail : b.message;
+    throw new ApiError(res.status, msg || (res.status === 429 ? "Too many requests." : "Request failed."));
+  }
+  return res.json() as Promise<T>;
+}
+
+export const rankApi = {
+  rank: (profile: ProfileIn, signal?: AbortSignal) => post<RankResponse>("/api/rank", { profile, limit: 20 }, signal),
+  whyNot: (profile: ProfileIn, job_id: number | null, signal?: AbortSignal) =>
+    post<WhyNotResponse>("/api/why-not-me", { profile, job_id }, signal),
+  skills: (q: string, signal?: AbortSignal) =>
+    get<{ skills: string[] }>(`/api/skills?q=${encodeURIComponent(q)}&limit=8`, signal),
+};

@@ -19,7 +19,9 @@ services:
         sync: false
       - key: EMBED_MODEL
         sync: false
-      - key: CORS_ORIGINS        # your Vercel production URL, e.g. https://<project>.vercel.app
+      - key: CORS_ORIGINS        # your Vercel production URL, e.g. https://<project>.vercel.app (no trailing slash)
+        sync: false
+      - key: CORS_ORIGIN_REGEX   # optional: also allow this project's per-deployment URLs
         sync: false
       - key: EMBED_DIM
         value: "768"
