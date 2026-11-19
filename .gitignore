@@ -42,3 +42,6 @@ Thumbs.db
 
 # logs
 *.log
+
+# personal resume notes (not part of the project)
+RESUME_BRIEF.md

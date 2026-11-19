@@ -1,26 +1,139 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Navy / cream / coral theme with frosted-glass surfaces. `dark:` utilities only apply under a .dark class,
+   which this app never sets, so a dark-mode OS still gets this theme. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens. Coral (#FF6B5B) is for fills with navy text on top (5.7:1); on cream it is only ~2.4:1,
+   so small coral-coloured text uses --color-accent-ink instead (>= 4.5:1 on cream and on glass). */
+@theme {
+  --color-navy: #14213d;
+  --color-cream: #f4ede0;
+  --color-coral: #ff6b5b;
+  --color-bg: #f4ede0;
+  --color-surface: rgb(255 255 255 / 0.55);
+  --color-surface-2: rgb(20 33 61 / 0.06);
+  --color-line: rgb(20 33 61 / 0.12);
+  --color-line-strong: rgb(20 33 61 / 0.26);
+  --color-ink: #14213d;
+  --color-muted: #4f5872;
+  --color-accent: #ff6b5b;
+  --color-accent-strong: #f4513f;
+  --color-accent-soft: rgb(255 107 91 / 0.16);
+  --color-accent-ink: #a8321f;
+  --color-steel: #5b7db1;
+  --color-good: #047857;
+  --color-warn: #b45309;
+  --color-bad: #b91c1c;
+  --radius-card: 1.25rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-bg);
+  color: var(--color-ink);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Soft static colour fields behind everything, so the glass has something to frost. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 28rem at 8% 12%, rgb(255 107 91 / 0.22), transparent 70%),
+    radial-gradient(44rem 32rem at 95% 35%, rgb(20 33 61 / 0.14), transparent 70%),
+    radial-gradient(36rem 26rem at 30% 95%, rgb(91 125 177 / 0.16), transparent 70%);
+}
+
+/* Frosted glass: translucent white, blur, hairline highlight. In a layer so utilities can override it. */
+@layer components {
+.glass {
+  background: rgb(255 255 255 / 0.5);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow:
+    0 10px 30px -12px rgb(20 33 61 / 0.18),
+    inset 0 1px 0 rgb(255 255 255 / 0.8);
+}
+/* Glass on the navy hero. */
+.glass-dark {
+  background: rgb(255 255 255 / 0.08);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgb(244 237 224 / 0.22);
+}
+}
+
+/* Navy hero with coral and steel glows (static, no animation). */
+.gj-glow {
+  background:
+    radial-gradient(46rem 26rem at 20% 10%, rgb(255 107 91 / 0.28), transparent 70%),
+    radial-gradient(40rem 24rem at 85% 80%, rgb(91 125 177 / 0.32), transparent 70%),
+    var(--color-navy);
+}
+
+/* The one long animation, by request: the name fades in once over 2 s. Never loops. */
+@keyframes gj-fade-in {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+.gj-fade-in {
+  animation: gj-fade-in 2s ease-out both;
+}
+.gj-fade-in-late {
+  animation: gj-fade-in 0.6s ease-out 1.6s both;
+}
+
+/* Short reveal for tiles as they scroll into view. */
+@keyframes gj-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.gj-reveal {
+  opacity: 0;
+}
+.gj-reveal.is-visible {
+  animation: gj-rise 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .gj-fade-in,
+  .gj-fade-in-late,
+  .gj-reveal,
+  .gj-reveal.is-visible {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
 }

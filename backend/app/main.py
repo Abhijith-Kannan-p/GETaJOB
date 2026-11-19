@@ -22,6 +22,7 @@ from app.db import close_pool
 from app.db import conn as db_conn
 from app.db.migrate import migrate
 from app.llm.client import get_embedder
+from app.rank.scorer import TERMS, load_weights
 from app.search.hybrid import SearchFilters, embed_query, hybrid_search
 
 log = logging.getLogger("getajob.api")
@@ -114,6 +115,12 @@ def stats():
         last = c.execute(
             "SELECT finished_at, mode FROM ingest_runs WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1"
         ).fetchone()
+        levels = c.execute(
+            "SELECT seniority, count(*) AS n FROM jobs WHERE closed_at IS NULL GROUP BY 1 ORDER BY 2 DESC"
+        ).fetchall()
+        top = c.execute(
+            "SELECT company, count(*) AS n FROM jobs WHERE closed_at IS NULL GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 12"
+        ).fetchall()
     eval_summary = None
     if EVAL_RESULTS.exists():
         try:
@@ -130,6 +137,9 @@ def stats():
         "last_sync": last["finished_at"].isoformat() if last else None,
         "last_sync_mode": last["mode"] if last else None,
         "semantic_search": app.state.embedder is not None,
+        "by_seniority": {r["seniority"]: r["n"] for r in levels},
+        "top_companies": [{"company": r["company"], "jobs": r["n"]} for r in top],
+        "ranking_weights": {t: load_weights().of(t) for t in TERMS},
         "eval": eval_summary,
     }
 

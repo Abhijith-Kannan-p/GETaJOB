@@ -52,6 +52,19 @@ Postgres + pgvector: HNSW (cosine) + GIN full-text; one SQL query fuses both wit
   cached in Postgres by hash of model|dim|task|text, so a repeated query or an unchanged profile never
   costs a second call. When the quota is gone, search falls back to full-text only with a banner.
 
+## Frontend
+
+| Route | What it is |
+|---|---|
+| `/` | Landing: the name fades in once (2 s, skipped under reduced motion); Enter button, or press the Enter key; scroll down for **live** tiles (open-role count, three real searches, a live Why-Not-Me result for a sample profile, roles by level, companies, score weights). No mock data. |
+| `/search` | Hybrid search with level/remote filters; `?q=` links run immediately |
+| `/app` | Profile built from buttons (role presets, popular-skill toggles, level pills, location presets, remote switch) → ranked jobs with score bars → "Why not me?" panel |
+
+Navy (#14213D) / cream (#F4EDE0) / coral (#FF6B5B) theme with frosted-glass surfaces, all from design tokens
+in `frontend/app/globals.css`. Coral is used for fills with navy text on top; small coral text uses a darker
+coral-ink token so it keeps ≥ 4.5:1 contrast. Icons from lucide-react. Lighthouse 13.6 (mobile) on the local
+production build: performance **96** (`/`), 96 (`/app`), 97 (`/search`); accessibility **100** on all three.
+
 ## Ranking and Why-Not-Me
 
 **Ranker** ([scorer.py](backend/app/rank/scorer.py)): one pure, deterministic function used by every

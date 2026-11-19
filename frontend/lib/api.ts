@@ -44,6 +44,9 @@ export type Stats = {
   last_sync: string | null;
   last_sync_mode: string | null;
   semantic_search: boolean;
+  by_seniority: Record<string, number>;
+  top_companies: { company: string; jobs: number }[];
+  ranking_weights: Record<string, number>;
 };
 
 export class ApiError extends Error {

@@ -153,6 +153,8 @@ def test_api_search_stats_health(db, boards):
         assert client.get("/health").json() == {"ok": True}
         st = client.get("/api/stats").json()
         assert st["jobs_active"] == 3 and st["embedding_coverage"] == 1.0
+        assert st["by_seniority"] == {"intern": 3} and st["top_companies"][0] == {"company": "Acme", "jobs": 3}
+        assert abs(sum(st["ranking_weights"].values()) - 1) < 1e-9
         r = client.get("/api/search", params={"q": "react typescript"}).json()
         assert r["degraded"] == "fulltext_only"  # MOCK_LLM -> no query embedder -> honest banner
         assert r["results"][0]["attribution"] == "via Greenhouse job board API"

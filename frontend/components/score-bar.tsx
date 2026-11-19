@@ -1,12 +1,12 @@
 import type { Breakdown, Term } from "@/lib/api";
 
 export const TERM_META: Record<Term, { label: string; className: string }> = {
-  semantic: { label: "Semantic", className: "bg-indigo-500" },
-  keyword: { label: "Keyword", className: "bg-sky-500" },
-  skills: { label: "Skills", className: "bg-emerald-500" },
-  seniority: { label: "Seniority", className: "bg-amber-500" },
-  location: { label: "Location", className: "bg-fuchsia-500" },
-  recency: { label: "Recency", className: "bg-zinc-400" },
+  semantic: { label: "Semantic", className: "bg-navy" },
+  keyword: { label: "Keyword", className: "bg-steel" },
+  skills: { label: "Skills", className: "bg-coral" },
+  seniority: { label: "Seniority", className: "bg-amber-400" },
+  location: { label: "Location", className: "bg-teal-500" },
+  recency: { label: "Recency", className: "bg-stone-400" },
 };
 const ORDER: Term[] = ["semantic", "keyword", "skills", "seniority", "location", "recency"];
 
@@ -16,7 +16,7 @@ export function ScoreBar({ breakdown, score }: { breakdown: Breakdown; score: nu
   return (
     <div>
       <div
-        className="flex h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+        className="flex h-2 w-full overflow-hidden rounded-full bg-surface-2"
         role="img"
         aria-label={`Score ${score.toFixed(2)} of 1: ${label}`}
       >
@@ -35,7 +35,7 @@ export function ScoreBar({ breakdown, score }: { breakdown: Breakdown; score: nu
 
 export function ScoreLegend() {
   return (
-    <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+    <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
       {ORDER.map((t) => (
         <li key={t} className="flex items-center gap-1">
           <span className={`inline-block h-2 w-2 rounded-full ${TERM_META[t].className}`} aria-hidden />
@@ -49,7 +49,7 @@ export function ScoreLegend() {
 export function BreakdownTable({ breakdown }: { breakdown: Breakdown }) {
   return (
     <table className="w-full text-xs">
-      <thead className="text-zinc-500">
+      <thead className="text-muted">
         <tr>
           <th className="text-left font-normal">Term</th>
           <th className="text-right font-normal">Value</th>

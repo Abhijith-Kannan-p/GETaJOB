@@ -10,21 +10,21 @@ function RankMove({ r }: { r: { before: number; after: number } | null }) {
   return (
     <span className="font-mono">
       #{r.before} → #{r.after}
-      {up > 0 && <span className="text-emerald-600 dark:text-emerald-400"> (▲{up})</span>}
+      {up > 0 && <span className="text-good"> (▲{up})</span>}
     </span>
   );
 }
 
 function FixRow({ e, forJob }: { e: Effect; forJob: boolean }) {
   return (
-    <li className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+    <li className="rounded-xl border border-line p-3">
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-medium">+ {e.skill}</span>
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-muted">
           {e.effort_tier} · ~{e.effort_hours} h <span className="italic">(my estimate)</span>
         </span>
       </div>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+      <p className="mt-1 text-sm text-muted">
         {forJob && e.job_rank && (
           <>
             This job: <RankMove r={e.job_rank} />.{" "}
@@ -60,12 +60,12 @@ export function GapPanel({
   const forJob = !!data?.job;
   const c = data?.plan.cumulative;
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex justify-end bg-navy/35 backdrop-blur-sm" onClick={onClose}>
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="gap-title"
-        className="h-full w-full max-w-lg overflow-y-auto border-l border-zinc-200 bg-white p-5 shadow-xl motion-safe:transition-transform dark:border-zinc-800 dark:bg-zinc-950"
+        className="h-full w-full max-w-lg overflow-y-auto glass bg-white/75 p-5 motion-safe:transition-transform"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -75,15 +75,15 @@ export function GapPanel({
           <button
             ref={closeRef}
             onClick={onClose}
-            className="rounded-lg px-2 py-1 text-sm hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none dark:hover:bg-zinc-900"
+            className="rounded-lg px-2 py-1 text-sm hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-ink focus-visible:outline-none"
           >
             Close
           </button>
         </div>
 
-        {loading && <p className="mt-6 text-sm text-zinc-500">Simulating the ranker…</p>}
+        {loading && <p className="mt-6 text-sm text-muted">Simulating the ranker…</p>}
         {error && (
-          <p role="alert" className="mt-6 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm">
+          <p role="alert" className="mt-6 rounded-xl border border-red-300 bg-red-50 text-red-900 px-3 py-2 text-sm">
             {error}
           </p>
         )}
@@ -112,16 +112,16 @@ export function GapPanel({
                       <li key={m.skill} className="flex justify-between gap-2">
                         <span>
                           {m.skill}{" "}
-                          <span className="text-xs text-zinc-500">({m.kind})</span>
+                          <span className="text-xs text-muted">({m.kind})</span>
                         </span>
-                        <span className="font-mono text-xs text-zinc-500">
+                        <span className="font-mono text-xs text-muted">
                           {(m.share * 100).toFixed(0)}% of this job&apos;s skill weight
                         </span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-sm text-zinc-500">You have every skill this posting lists.</p>
+                  <p className="mt-2 text-sm text-muted">You have every skill this posting lists.</p>
                 )}
               </section>
             )}
@@ -135,7 +135,7 @@ export function GapPanel({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-sm text-zinc-500">No single skill changes the ranking here.</p>
+                <p className="mt-2 text-sm text-muted">No single skill changes the ranking here.</p>
               )}
             </section>
 
@@ -145,7 +145,7 @@ export function GapPanel({
                 <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">
                   {data.plan.steps.map((s) => (
                     <li key={s.skill}>
-                      {s.skill} <span className="text-xs text-zinc-500">~{s.effort_hours} h (my estimate)</span>
+                      {s.skill} <span className="text-xs text-muted">~{s.effort_hours} h (my estimate)</span>
                     </li>
                   ))}
                 </ol>
@@ -163,7 +163,7 @@ export function GapPanel({
               </section>
             )}
 
-            <p className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+            <p className="rounded-xl border border-line bg-surface-2 p-3 text-xs text-muted">
               {data.disclaimer} {data.effort_note}
             </p>
           </div>
