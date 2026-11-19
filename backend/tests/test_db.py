@@ -165,3 +165,11 @@ def test_fulltext_matches_any_term_and_ranks_more_matches_higher(db, boards):
     rows = hybrid_search(db, "frontend react internship kotlin", None, limit=3)
     assert rows and rows[0]["title"] == "Frontend Engineer Intern"
     assert hybrid_search(db, "!!! ???", None) == []  # query with no lexemes is safe
+
+
+def test_quota_day_is_pacific_date(db):
+    quota.count_day(db, "embed", 1)
+    row = db.execute(
+        "SELECT day = (now() AT TIME ZONE 'America/Los_Angeles')::date AS ok FROM usage_daily WHERE kind = 'embed'"
+    ).fetchone()
+    assert row["ok"]

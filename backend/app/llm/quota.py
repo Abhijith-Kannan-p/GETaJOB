@@ -15,6 +15,10 @@ from app.config import get_settings
 
 log = logging.getLogger("getajob.quota")
 
+# Gemini free-tier daily quotas reset at midnight Pacific time, so "today" is the Pacific date.
+# Counting by UTC date would let one Google day straddle two of ours (up to 2x RPD).
+QUOTA_DAY = "(now() AT TIME ZONE 'America/Los_Angeles')::date"
+
 
 class QuotaExceeded(Exception):
     def __init__(self, kind: str, scope: str):
@@ -93,7 +97,9 @@ def count_day(conn, kind: str, n: int = 1, ceiling: int | None = None) -> int:
     try:
         row = conn.execute(
             """
-            INSERT INTO usage_daily (day, kind, count) VALUES (current_date, %(k)s, %(n)s)
+            INSERT INTO usage_daily (day, kind, count) VALUES ("""
+            + QUOTA_DAY
+            + """, %(k)s, %(n)s)
             ON CONFLICT (day, kind) DO UPDATE SET count = usage_daily.count + %(n)s
               WHERE usage_daily.count + %(n)s <= %(lim)s
             RETURNING count
@@ -109,7 +115,7 @@ def count_day(conn, kind: str, n: int = 1, ceiling: int | None = None) -> int:
 
 
 def used_today(conn, kind: str) -> int:
-    row = conn.execute("SELECT count FROM usage_daily WHERE day = current_date AND kind = %s", (kind,)).fetchone()
+    row = conn.execute("SELECT count FROM usage_daily WHERE day = " + QUOTA_DAY + " AND kind = %s", (kind,)).fetchone()
     return 0 if row is None else (row["count"] if isinstance(row, dict) else row[0])
 
 

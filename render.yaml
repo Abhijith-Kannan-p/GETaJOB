@@ -1,0 +1,43 @@
+# Render Blueprint: one free web service in Singapore. Secrets use sync: false, so Render asks for them in the
+# dashboard; they are never stored in this file.
+services:
+  - type: web
+    name: getajob-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL        # Neon DIRECT (non-pooled) connection string
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: EMBED_MODEL
+        sync: false
+      - key: CORS_ORIGINS        # your Vercel production URL, e.g. https://<project>.vercel.app
+        sync: false
+      - key: EMBED_DIM
+        value: "768"
+      - key: LLM_RPM
+        value: "12"
+      - key: LLM_RPD
+        value: "400"
+      - key: EMBED_RPM
+        value: "80"
+      - key: EMBED_RPD
+        value: "800"
+      - key: EMBED_TPM
+        value: "24000"
+      - key: EMBED_RESERVE_RPD
+        value: "250"
+      - key: MAX_ACTIVE_JOBS
+        value: "1000"
+      - key: MOCK_LLM
+        value: "0"
+      - key: LOG_LEVEL
+        value: INFO

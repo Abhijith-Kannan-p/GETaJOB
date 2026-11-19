@@ -96,6 +96,30 @@ Other commands (from `backend/`):
 `EMBED_RPM`, `EMBED_RPD`, `EMBED_TPM`, `EMBED_RESERVE_RPD`, `MOCK_LLM`, `CORS_ORIGINS`, `LOG_LEVEL`,
 `MAX_ACTIVE_JOBS`, `HTTP_SLEEP_S`, `USER_AGENT`. See `.env.example`.
 
+## Deployment (all free tier)
+
+```
+Vercel (Next.js, static shell) ──HTTPS──> Render web service (Docker, Singapore, 1 uvicorn worker)
+                                              │  migrations applied at boot (idempotent)
+                                              ▼
+GitHub Actions nightly sync ───────────────> Neon Postgres 17 + pgvector
+(08:30 UTC, just after Gemini's daily reset)
+```
+
+- **Backend:** `Dockerfile` (python:3.11-slim, non-root, one worker, about 50 MB RAM measured locally)
+  plus `render.yaml` (free plan, Singapore, `healthCheckPath: /health`, secrets `sync: false`).
+- **Database:** Neon. Use the **direct** (non-pooled) connection string: the app keeps its own pool
+  of 4 and sets a per-session HNSW parameter.
+- **Data:** `.github/workflows/sync.yml` runs nightly and on demand. Mode `seed-fixtures` loads the committed
+  snapshot with zero API calls. Mode `sync` fetches all boards and embeds pending rows, highest priority
+  first, within `EMBED_RPD − EMBED_RESERVE_RPD`. 1,000 jobs take about two nightly runs to embed fully.
+- **Quota days follow Gemini's reset** (midnight Pacific), not UTC.
+- **Free-tier behaviour:** Render sleeps after idle; the first request can take up to about a minute and the
+  UI says so. GitHub disables scheduled workflows after 60 days without repository activity.
+- **Shared key, separate counters:** local dev and production each count usage in their own database but
+  share the same Gemini key's real quota. If both are busy on one day, the provider's 429 is handled as
+  "quota used up" (full-text search plus a banner), never as an error page.
+
 ## Privacy
 
 Free-tier LLM/embedding prompts may be used by the provider, so the app never asks for resumes or

@@ -27,7 +27,8 @@ def get_pool() -> ConnectionPool:
             get_settings().database_url,
             min_size=1,
             max_size=4,
-            kwargs={"row_factory": dict_row, "autocommit": True},
+            # prepare_threshold=None: no server-side prepared statements, safe behind PgBouncer-style poolers
+            kwargs={"row_factory": dict_row, "autocommit": True, "prepare_threshold": None},
             configure=_configure,
             open=True,
         )
