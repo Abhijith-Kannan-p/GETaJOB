@@ -1,0 +1,89 @@
+# CI on every push and pull request: backend lint + tests against real Postgres/pgvector, the production
+# Docker image build, and the frontend lint + production build. No secrets: tests use fakes only
+# (conftest blanks GEMINI_API_KEY and sets MOCK_LLM), so CI can never call a real LLM or embedding API.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17  # same major version and extension as Neon and docker-compose
+        env:
+          POSTGRES_USER: getajob
+          POSTGRES_PASSWORD: getajob
+          POSTGRES_DB: getajob
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U getajob"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://getajob:getajob@localhost:5432/getajob_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      # DB tests skip themselves when Postgres is unreachable (handy locally); in CI a skip means a broken
+      # service container, so it fails the job. The default shell uses pipefail, so a test failure fails too.
+      - name: Tests (fakes only, real Postgres)
+        run: |
+          python -m pytest -q -rs -p no:cacheprovider | tee pytest.txt
+          if grep -q "Postgres not reachable" pytest.txt; then echo "::error::DB tests were skipped"; exit 1; fi
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the production image (same Dockerfile Render uses)
+        run: docker build -t getajob-api:ci .
+      # Startup tolerates a missing DB (migration and session pruning are logged and skipped), but waits about
+      # 30 s for the pool first; measured locally at 32 s, hence the 90 s budget.
+      - name: Smoke test, /health answers without a database
+        run: |
+          docker run -d --name api -p 8000:8000 -e DATABASE_URL=postgresql://nobody@127.0.0.1:1/none getajob-api:ci
+          for i in $(seq 1 90); do curl -fsS http://127.0.0.1:8000/health && exit 0; sleep 1; done
+          docker logs api; exit 1
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://example.invalid  # build only; the real URL is set in Vercel

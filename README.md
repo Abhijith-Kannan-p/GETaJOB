@@ -269,6 +269,11 @@ GitHub Actions nightly sync ───────────────> Neon 
 - **Data:** `.github/workflows/sync.yml` runs nightly and on demand. Mode `seed-fixtures` loads the committed
   snapshot with zero API calls. Mode `sync` fetches all boards and embeds pending rows, highest priority
   first, within `EMBED_RPD − EMBED_RESERVE_RPD`. 1,000 jobs take about two nightly runs to embed fully.
+- **CI** (`.github/workflows/ci.yml`, every push and PR, no secrets):
+  - backend: ruff, plus pytest on fakes against a pgvector Postgres service container; the job fails if the DB
+    tests were skipped
+  - the production Docker image is built and must answer `/health` with no database
+  - frontend: lint, type check and production build
 - **Quota days follow Gemini's reset** (midnight Pacific), not UTC.
 - **Free-tier behaviour:** Render sleeps after idle; the first request can take up to about a minute and the
   UI says so. GitHub disables scheduled workflows after 60 days without repository activity.
