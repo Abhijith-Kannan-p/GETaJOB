@@ -109,9 +109,16 @@ function Extractor({ before, after }: { before?: ExtractorRun; after?: Extractor
               .map(([label, r]) => [label, r!.n_postings, pct(r!.micro.precision), pct(r!.micro.recall), pct(r!.micro.f1)])}
           />
           <p className="mt-3 text-xs text-muted">
-            {cur.n_gold} hand-checked (posting, skill) pairs from {cur.n_companies} companies; micro-averaged.
+            {cur.n_postings} postings from {cur.n_companies} companies, {cur.n_gold} labelled (posting, skill) pairs;
+            micro-averaged. Labelled by an AI assistant (Claude) at the author&apos;s request, one annotator.
             {cur.not_in_taxonomy > 0 && ` ${cur.not_in_taxonomy} skills the taxonomy does not cover were noted separately.`}
           </p>
+          {after && (
+            <p className="mt-2 text-xs text-muted">
+              The fixes behind &ldquo;after&rdquo; were chosen from errors on this same sample, so it is an optimistic,
+              in-sample estimate.
+            </p>
+          )}
         </>
       ) : (
         <NotYet what="70 postings are sampled and waiting for hand-labelling." />

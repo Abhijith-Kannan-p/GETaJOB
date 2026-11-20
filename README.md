@@ -7,9 +7,8 @@ internships: *"Data Science Intern: adding NumPy, R and Keras moves it from #41 
 estimates)."* These are the ranker's own numbers, not a hiring prediction.
 
 > Status: slices 1–6 of 7 (ingestion and hybrid search; free-tier deploy; ranker and Why-Not-Me; grounded
-> agent with session memory; UI; evals). Two evals still need input: skill-extractor labels (hand-checked) and
-> the live-Gemini grounding run. CI and the remaining hardening come in slice 7. Nothing below describes a
-> feature that does not exist yet.
+> agent with session memory; UI; evals). One eval is still to run: LLM grounding with live Gemini. CI and the
+> remaining hardening come in slice 7. Nothing below describes a feature that does not exist yet.
 
 ## Data sources
 
@@ -188,9 +187,19 @@ and a section that has not been run shows no number.
 |---|---|
 | Why-Not-Me simulation vs. full re-rank | **100% agreement**: 1,532 simulations over 7 synthetic profiles, 229,800 job ranks compared, max score difference 0 (local DB, 150 jobs, hybrid pools) |
 | Search latency, local | p50 **22 ms**, p95 **33 ms** round trip; server time p50 4 ms, p95 6 ms (n = 60, 150 jobs, cached query embeddings) |
-| Search latency, deployed | not measured yet |
-| Skill extractor P/R/F1 | 70 postings from 30 companies sampled and pre-filled; **waiting for hand labels** |
+| Search latency, deployed (Render free, Singapore) | p50 **181 ms**, p95 **223 ms** round trip from the author's machine; server time p50 16 ms, p95 19 ms (n = 60, about 1,000 jobs, warm instance; first request 3.4 s) |
+| Skill extractor P/R/F1 | before fixes: P **88.9%**, R **86.2%**, F1 **87.5%**; after taxonomy fixes: P **90.6%**, R **88.7%**, F1 **89.7%** (70 postings, 30 companies, 993 labelled pairs) |
 | LLM grounding (first try / after retry / fallback) | **not run yet** (real Gemini, ≤ 140 calls for n = 35) |
+
+About the extractor numbers:
+- The labels were made by an AI coding assistant (Claude) at my request. It read every posting in full and
+  started from the extractor's own output, so they may lean towards agreeing with it. There was one
+  annotator and no second rater.
+- "After" is in-sample: the 24 taxonomy fixes were chosen from errors on these same 70 postings. Examples:
+  "payment rails" was read as Ruby on Rails, "Zone C" in a pay table as the C language, "single-node" as
+  Node.js, and bare "REST", "evals" and "RDS" were not recognised.
+- The largest remaining error needs context, not aliases. A partner team named in the duties ("work with
+  Product Management, Data Science…") is counted as a required skill.
 
 ## Local development (Windows PowerShell)
 

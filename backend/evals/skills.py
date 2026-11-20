@@ -38,7 +38,9 @@ YES = {"y", "yes", "1", "x", "true"}
 METHOD = (
     "Postings fetched from the public Greenhouse/Lever board APIs with the production cap and priority selection, "
     "then sampled round-robin over companies with a fixed seed; sections snapshotted to eval/skill_set.jsonl. "
-    "Gold = taxonomy skills the posting asks for or says the role uses, hand-corrected by the author from a "
+    "Gold = taxonomy skills the posting asks for or says the role uses (not company/customer names, partner "
+    "teams, degree-field lists, legal or benefits text). Labelled by an AI coding assistant (Claude) at the "
+    "author's request, reading every posting in full; single annotator, no inter-rater check; starting from a "
     "pre-filled copy of the extractor output (possible anchoring bias towards the extractor). Prediction = the "
     "production extractor (required + preferred, boilerplate sections skipped) with the taxonomy at scoring time. "
     "Micro P/R/F1 over (posting, skill) pairs."

@@ -45,8 +45,15 @@
     },
     "failures": []
   },
-  "updated_at": "2026-11-20T16:50:33+00:00",
+  "updated_at": "2026-11-20T17:33:31+00:00",
   "summary": {
+    "extractor": {
+      "f1": 0.8967,
+      "precision": 0.9064,
+      "recall": 0.8872,
+      "n_postings": 70,
+      "which": "after"
+    },
     "simulation": {
       "agreement": 1.0,
       "n_simulations": 1532
@@ -55,6 +62,11 @@
       "local": {
         "p50_ms": 22.3,
         "p95_ms": 33.2,
+        "n": 60
+      },
+      "deployed": {
+        "p50_ms": 181.1,
+        "p95_ms": 223.0,
         "n": 60
       }
     }
@@ -79,6 +91,284 @@
       "first_request_ms": 815.1,
       "degraded_responses": 0,
       "jobs_active": 150
+    },
+    "deployed": {
+      "measured_at": "2026-11-20T17:27:30+00:00",
+      "method": "20 fixed queries; one untimed warm-up pass (wakes the host, fills the query-embedding cache), then n timed sequential requests spaced 2.1 s apart from one client. Round trip = client wall time for the HTTP request; server = the API's own took_ms (embedding lookup + hybrid SQL). Cached query embeddings, so the embedding API's latency is not included.",
+      "n": 60,
+      "round_trip_ms": {
+        "p50": 181.1,
+        "p95": 223.0,
+        "min": 153.4,
+        "max": 581.0
+      },
+      "server_ms": {
+        "p50": 16.0,
+        "p95": 19.2,
+        "min": 13.0,
+        "max": 22.5
+      },
+      "first_request_ms": 3447.3,
+      "degraded_responses": 0,
+      "jobs_active": 1000
+    }
+  },
+  "extractor": {
+    "before": {
+      "measured_at": "2026-11-20T17:33:30+00:00",
+      "method": "Postings fetched from the public Greenhouse/Lever board APIs with the production cap and priority selection, then sampled round-robin over companies with a fixed seed; sections snapshotted to eval/skill_set.jsonl. Gold = taxonomy skills the posting asks for or says the role uses (not company/customer names, partner teams, degree-field lists, legal or benefits text). Labelled by an AI coding assistant (Claude) at the author's request, reading every posting in full; single annotator, no inter-rater check; starting from a pre-filled copy of the extractor output (possible anchoring bias towards the extractor). Prediction = the production extractor (required + preferred, boilerplate sections skipped) with the taxonomy at scoring time. Micro P/R/F1 over (posting, skill) pairs.",
+      "n_postings": 70,
+      "n_unreviewed": 0,
+      "n_gold": 993,
+      "n_companies": 30,
+      "not_in_taxonomy": 73,
+      "taxonomy_sha": "188617de3c71",
+      "aliases": 817,
+      "micro": {
+        "precision": 0.8889,
+        "recall": 0.862,
+        "f1": 0.8753,
+        "tp": 856,
+        "fp": 107,
+        "fn": 137
+      },
+      "macro": {
+        "precision": 0.8759,
+        "recall": 0.8301,
+        "f1": 0.8391
+      },
+      "top_false_positives": [
+        {
+          "skill": "Product Management",
+          "count": 12,
+          "example": "greenhouse:6267173004"
+        },
+        {
+          "skill": "Data Science",
+          "count": 10,
+          "example": "lever:26e23f5d-083b-45aa-b223-1a6e43d960bf"
+        },
+        {
+          "skill": "Mentorship",
+          "count": 7,
+          "example": "lever:0c32245b-f51d-40d2-8e57-a0be1b744c5b"
+        },
+        {
+          "skill": "Collaboration",
+          "count": 6,
+          "example": "greenhouse:7848363"
+        },
+        {
+          "skill": "Machine Learning",
+          "count": 4,
+          "example": "greenhouse:8255904"
+        },
+        {
+          "skill": "UX Design",
+          "count": 3,
+          "example": "greenhouse:8282760"
+        },
+        {
+          "skill": "HTTP",
+          "count": 3,
+          "example": "greenhouse:8212868"
+        },
+        {
+          "skill": "Salesforce",
+          "count": 3,
+          "example": "greenhouse:6267173004"
+        },
+        {
+          "skill": "Data Visualization",
+          "count": 3,
+          "example": "greenhouse:7447426"
+        },
+        {
+          "skill": "Communication",
+          "count": 3,
+          "example": "lever:5c7bb70c-83ea-43e7-8055-0c8f319f4333"
+        }
+      ],
+      "top_false_negatives": [
+        {
+          "skill": "Mentorship",
+          "count": 10,
+          "example": "greenhouse:6267173004"
+        },
+        {
+          "skill": "Collaboration",
+          "count": 9,
+          "example": "lever:26e23f5d-083b-45aa-b223-1a6e43d960bf"
+        },
+        {
+          "skill": "Technical Writing",
+          "count": 9,
+          "example": "greenhouse:6267173004"
+        },
+        {
+          "skill": "Communication",
+          "count": 8,
+          "example": "greenhouse:8878486002"
+        },
+        {
+          "skill": "Cloud Computing",
+          "count": 7,
+          "example": "greenhouse:8055422"
+        },
+        {
+          "skill": "Computer Science Degree",
+          "count": 5,
+          "example": "lever:26e23f5d-083b-45aa-b223-1a6e43d960bf"
+        },
+        {
+          "skill": "Performance Optimization",
+          "count": 5,
+          "example": "greenhouse:8878486002"
+        },
+        {
+          "skill": "Payment Systems",
+          "count": 5,
+          "example": "greenhouse:8199288003"
+        },
+        {
+          "skill": "REST APIs",
+          "count": 5,
+          "example": "greenhouse:8164730"
+        },
+        {
+          "skill": "LLM Evaluation",
+          "count": 4,
+          "example": "greenhouse:5443882008"
+        }
+      ]
+    },
+    "after": {
+      "measured_at": "2026-11-20T17:33:31+00:00",
+      "method": "Postings fetched from the public Greenhouse/Lever board APIs with the production cap and priority selection, then sampled round-robin over companies with a fixed seed; sections snapshotted to eval/skill_set.jsonl. Gold = taxonomy skills the posting asks for or says the role uses (not company/customer names, partner teams, degree-field lists, legal or benefits text). Labelled by an AI coding assistant (Claude) at the author's request, reading every posting in full; single annotator, no inter-rater check; starting from a pre-filled copy of the extractor output (possible anchoring bias towards the extractor). Prediction = the production extractor (required + preferred, boilerplate sections skipped) with the taxonomy at scoring time. Micro P/R/F1 over (posting, skill) pairs.",
+      "n_postings": 70,
+      "n_unreviewed": 0,
+      "n_gold": 993,
+      "n_companies": 30,
+      "not_in_taxonomy": 73,
+      "taxonomy_sha": "a15b3cb0fdd5",
+      "aliases": 828,
+      "micro": {
+        "precision": 0.9064,
+        "recall": 0.8872,
+        "f1": 0.8967,
+        "tp": 881,
+        "fp": 91,
+        "fn": 112
+      },
+      "macro": {
+        "precision": 0.8931,
+        "recall": 0.8567,
+        "f1": 0.8642
+      },
+      "top_false_positives": [
+        {
+          "skill": "Product Management",
+          "count": 11,
+          "example": "greenhouse:6267173004"
+        },
+        {
+          "skill": "Data Science",
+          "count": 10,
+          "example": "lever:26e23f5d-083b-45aa-b223-1a6e43d960bf"
+        },
+        {
+          "skill": "Mentorship",
+          "count": 7,
+          "example": "lever:0c32245b-f51d-40d2-8e57-a0be1b744c5b"
+        },
+        {
+          "skill": "Collaboration",
+          "count": 6,
+          "example": "greenhouse:7848363"
+        },
+        {
+          "skill": "Machine Learning",
+          "count": 4,
+          "example": "greenhouse:8255904"
+        },
+        {
+          "skill": "UX Design",
+          "count": 3,
+          "example": "greenhouse:8282760"
+        },
+        {
+          "skill": "Salesforce",
+          "count": 3,
+          "example": "greenhouse:6267173004"
+        },
+        {
+          "skill": "Data Visualization",
+          "count": 3,
+          "example": "greenhouse:7447426"
+        },
+        {
+          "skill": "SQL",
+          "count": 2,
+          "example": "greenhouse:8255904"
+        },
+        {
+          "skill": "Web Accessibility",
+          "count": 2,
+          "example": "greenhouse:8878486002"
+        }
+      ],
+      "top_false_negatives": [
+        {
+          "skill": "Mentorship",
+          "count": 10,
+          "example": "greenhouse:6267173004"
+        },
+        {
+          "skill": "Collaboration",
+          "count": 9,
+          "example": "lever:26e23f5d-083b-45aa-b223-1a6e43d960bf"
+        },
+        {
+          "skill": "Technical Writing",
+          "count": 9,
+          "example": "greenhouse:6267173004"
+        },
+        {
+          "skill": "Communication",
+          "count": 8,
+          "example": "greenhouse:8878486002"
+        },
+        {
+          "skill": "Computer Science Degree",
+          "count": 5,
+          "example": "lever:26e23f5d-083b-45aa-b223-1a6e43d960bf"
+        },
+        {
+          "skill": "Performance Optimization",
+          "count": 4,
+          "example": "greenhouse:8878486002"
+        },
+        {
+          "skill": "Problem Solving",
+          "count": 4,
+          "example": "greenhouse:5296729007"
+        },
+        {
+          "skill": "Distributed Systems",
+          "count": 4,
+          "example": "greenhouse:8022867"
+        },
+        {
+          "skill": "AI Agents",
+          "count": 3,
+          "example": "greenhouse:5206870008"
+        },
+        {
+          "skill": "Containers",
+          "count": 2,
+          "example": "greenhouse:8255904"
+        }
+      ]
     }
   }
 }

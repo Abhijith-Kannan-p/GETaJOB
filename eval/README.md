@@ -15,6 +15,10 @@ Run everything from `backend/` with the venv's Python (`.\.venv\Scripts\python` 
 
 ## 1. Skill extractor: the labelling workflow
 
+Status: done. All 70 rows were labelled by an AI coding assistant (Claude) at the author's request. Each
+row's `notes` column says what was corrected and why. Scored before and after 24 taxonomy fixes (see
+`RESULTS.md`).
+
 1. `sample` (already done): fetched the 30 boards from the public APIs, applied the production cap and
    priority selection (1,000 postings), and drew 70 postings round-robin over companies (seed 7).
    - Each posting's sections are frozen in `skill_set.jsonl`, so scores stay reproducible after the postings

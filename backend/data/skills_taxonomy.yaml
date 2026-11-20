@@ -16,7 +16,7 @@ skills:
 - {name: Go, aliases: [golang], case: true, block: [Go-to, Go to market, go-to-market, Go live, Go-live, Go beyond, Go above]}
 - {name: Rust, aliases: [], case: true}
 - {name: C++, aliases: [cpp]}
-- {name: C, aliases: [], case: true, block: [Series C, C-suite, C-level, C level, C corp]}
+- {name: C, aliases: [], case: true, block: [Series C, C-suite, C-level, C level, C corp, Zone C]}
 - {name: C#, aliases: [csharp]}
 - {name: Kotlin, aliases: []}
 - {name: Swift, aliases: [], case: true}
@@ -47,7 +47,7 @@ skills:
 - {name: OCaml, aliases: []}
 - {name: Zig, aliases: [], case: true}
 - {name: SQL, aliases: []}
-- {name: PL/SQL, aliases: [plsql]}
+- {name: PL/SQL, aliases: [plsql, pl-sql]}
 - {name: T-SQL, aliases: [tsql, transact-sql]}
 - {name: HTML, aliases: [html5]}
 - {name: CSS, aliases: [css3]}
@@ -79,7 +79,7 @@ skills:
 - {name: WebSockets, aliases: [websocket, web sockets]}
 - {name: Server-Side Rendering, aliases: [ssr]}
 # --- backend frameworks & runtimes ---
-- {name: Node.js, aliases: [node, nodejs], block: [leaf node, node pool]}
+- {name: Node.js, aliases: [nodejs], case_aliases: [Node], block: [leaf node, node pool]}
 - {name: Express.js, aliases: [expressjs]}
 - {name: NestJS, aliases: [nest.js]}
 - {name: Deno, aliases: [], case: true}
@@ -88,13 +88,13 @@ skills:
 - {name: FastAPI, aliases: []}
 - {name: Spring Boot, aliases: [spring framework, springboot]}
 - {name: Hibernate, aliases: []}
-- {name: Ruby on Rails, aliases: [rails, ror]}
+- {name: Ruby on Rails, aliases: [ror], case_aliases: [Rails]}
 - {name: Laravel, aliases: []}
 - {name: ASP.NET, aliases: [asp.net core]}
 - {name: .NET, aliases: [dotnet, .net core, .net framework]}
 - {name: gRPC, aliases: []}
 - {name: GraphQL, aliases: [apollo graphql]}
-- {name: REST APIs, aliases: [restful, rest api, restful apis, restful services]}
+- {name: REST APIs, aliases: [restful, rest api, restful apis, restful services], case_aliases: [REST]}
 - {name: Protocol Buffers, aliases: [protobuf, protobufs]}
 - {name: OpenAPI, aliases: [swagger]}
 - {name: Microservices, aliases: [microservice, micro-services, microservice architecture]}
@@ -125,7 +125,7 @@ skills:
 - {name: Redis, aliases: []}
 - {name: Cassandra, aliases: [apache cassandra]}
 - {name: DynamoDB, aliases: []}
-- {name: Elasticsearch, aliases: [elastic search, opensearch]}
+- {name: Elasticsearch, aliases: [elastic search, opensearch, elastic stack], case_aliases: [ELK]}
 - {name: Neo4j, aliases: []}
 - {name: CockroachDB, aliases: []}
 - {name: ClickHouse, aliases: []}
@@ -153,7 +153,7 @@ skills:
 - {name: Apache Kafka, aliases: [kafka, kafka streams]}
 - {name: Apache Flink, aliases: [flink]}
 - {name: Apache Airflow, aliases: [airflow]}
-- {name: dbt, aliases: [], case: true}
+- {name: dbt, aliases: [], case: true, case_aliases: [DBT]}
 - {name: Hadoop, aliases: [hdfs, mapreduce]}
 - {name: Hive, aliases: [apache hive], case: true}
 - {name: Trino, aliases: [presto]}
@@ -177,7 +177,7 @@ skills:
 - {name: SciPy, aliases: []}
 - {name: Polars, aliases: []}
 - {name: Jupyter, aliases: [jupyter notebooks, jupyter notebook]}
-- {name: Excel, aliases: [microsoft excel, ms excel], case: true}
+- {name: Excel, aliases: [microsoft excel, ms excel], case: true, block: [Excel at, Excel in]}
 - {name: Google Sheets, aliases: []}
 - {name: Tableau, aliases: []}
 - {name: Power BI, aliases: [powerbi]}
@@ -222,9 +222,9 @@ skills:
 - {name: LlamaIndex, aliases: []}
 - {name: LangGraph, aliases: []}
 - {name: AI Agents, aliases: [llm agents, agentic systems, autonomous agents, function calling]}
-- {name: Fine-Tuning, aliases: [fine tuning, finetuning, lora, peft, rlhf]}
+- {name: Fine-Tuning, aliases: [fine tuning, finetuning, lora, peft, rlhf], block: [performance fine-tuning, performance fine tuning]}
 - {name: Embeddings, aliases: [embedding models, vector embeddings, text embeddings]}
-- {name: LLM Evaluation, aliases: [llm evals, model evaluation]}
+- {name: LLM Evaluation, aliases: [llm evals, model evaluation, evals]}
 - {name: Reinforcement Learning, aliases: [deep reinforcement learning]}
 - {name: Recommender Systems, aliases: [recommendation systems, recommendation engines, recommenders, recsys]}
 - {name: Information Retrieval, aliases: [search ranking, learning to rank, ranking systems, semantic search]}
@@ -248,22 +248,22 @@ skills:
 - {name: AWS, aliases: [amazon web services]}
 - {name: GCP, aliases: [google cloud, google cloud platform]}
 - {name: Azure, aliases: [microsoft azure]}
-- {name: AWS Lambda, aliases: [lambda functions]}
+- {name: AWS Lambda, aliases: [lambda functions], case_aliases: [Lambda]}
 - {name: Amazon S3, aliases: [s3]}
 - {name: Amazon EC2, aliases: [ec2]}
-- {name: Amazon ECS, aliases: [fargate]}
+- {name: Amazon ECS, aliases: [fargate], case_aliases: [ECS]}
 - {name: Amazon EKS, aliases: [eks]}
 - {name: Google Kubernetes Engine, aliases: [gke]}
 - {name: Cloud Run, aliases: [google cloud run]}
-- {name: Amazon RDS, aliases: [aurora]}
+- {name: Amazon RDS, aliases: [aurora], case_aliases: [RDS]}
 - {name: Amazon SQS, aliases: [sqs]}
 - {name: AWS IAM, aliases: []}
-- {name: AWS CDK, aliases: [cloudformation]}
+- {name: AWS CDK, aliases: []}
 - {name: Vertex AI, aliases: []}
 - {name: SageMaker, aliases: [amazon sagemaker]}
 - {name: Cloudflare Workers, aliases: []}
 - {name: Heroku, aliases: []}
-- {name: Cloud Computing, aliases: [cloud infrastructure, cloud platforms, public cloud, cloud-native, cloud native]}
+- {name: Cloud Computing, aliases: [cloud infrastructure, cloud platforms, public cloud, cloud-native, cloud native, cloud providers, cloud architectures, cloud architecture]}
 # --- devops / infra ---
 - {name: Docker, aliases: [containerization, dockerfile]}
 - {name: Containers, aliases: [containerized, container orchestration]}
@@ -299,11 +299,11 @@ skills:
 - {name: Incident Response, aliases: [on-call, incident management]}
 - {name: Networking, aliases: [computer networking, network protocols]}
 - {name: TCP/IP, aliases: [tcp, udp]}
-- {name: HTTP, aliases: [http/2]}
+- {name: HTTP, aliases: [http/2], block: ['http://', 'https://']}
 - {name: DNS, aliases: []}
 - {name: Load Balancing, aliases: [load balancers]}
 - {name: CDN, aliases: [cdns, content delivery network]}
-- {name: Performance Optimization, aliases: [performance tuning, profiling, latency optimization]}
+- {name: Performance Optimization, aliases: [performance tuning, profiling, latency optimization, performance bottlenecks], block: [data profiling]}
 - {name: Capacity Planning, aliases: []}
 - {name: Virtualization, aliases: [vmware, kvm, hypervisor, hypervisors]}
 - {name: Release Engineering, aliases: [build systems, release management]}
@@ -332,7 +332,7 @@ skills:
 - {name: SAP, aliases: [], case: true}
 - {name: ServiceNow, aliases: []}
 # --- CS fundamentals ---
-- {name: Data Structures, aliases: [data structures and algorithms, dsa]}
+- {name: Data Structures, aliases: [dsa]}
 - {name: Algorithms, aliases: [algorithm design]}
 - {name: System Design, aliases: [systems design, software architecture]}
 - {name: Distributed Systems, aliases: [distributed computing, large-scale distributed systems]}
@@ -345,7 +345,7 @@ skills:
 - {name: Computer Architecture, aliases: []}
 - {name: Database Internals, aliases: [storage engines]}
 - {name: Caching, aliases: [caching strategies]}
-- {name: Scalability, aliases: [high availability, fault tolerance, fault-tolerant]}
+- {name: Scalability, aliases: [high availability]}
 - {name: Consensus Algorithms, aliases: [raft, paxos]}
 - {name: Computer Science Degree, aliases: [degree in computer science, bachelor's in computer science, bs in computer science, b.tech, btech, computer science or related field, computer science or a related field]}
 - {name: Graph Algorithms, aliases: [graph theory]}
@@ -375,21 +375,21 @@ skills:
 - {name: ROS, aliases: [ros2, robot operating system], case: true}
 - {name: Robotics, aliases: []}
 - {name: Computer Graphics, aliases: [opengl, vulkan, directx, shaders]}
-- {name: Unity, aliases: [unity3d], case: true}
+- {name: Unity, aliases: [unity3d], case: true, block: [Unity Catalog]}
 - {name: Unreal Engine, aliases: []}
 - {name: Signal Processing, aliases: [dsp, digital signal processing]}
 - {name: Control Systems, aliases: [control theory]}
 - {name: Sensor Fusion, aliases: [kalman filter, kalman filters]}
 - {name: SLAM, aliases: []}
 - {name: Autonomous Vehicles, aliases: [self-driving, autonomous driving]}
-- {name: IoT, aliases: [internet of things]}
+- {name: IoT, aliases: [internet of things], block: ['NYSE: IOT']}
 - {name: Device Drivers, aliases: [linux device drivers]}
 - {name: High-Performance Computing, aliases: [hpc, mpi, openmp]}
 # --- product / domain (tech-adjacent) ---
-- {name: Product Management, aliases: [product roadmap]}
+- {name: Product Management, aliases: []}
 - {name: UX Design, aliases: [user experience, ui/ux, ux research, user research]}
 - {name: Prototyping, aliases: []}
-- {name: Payment Systems, aliases: [payment processing, payments infrastructure]}
+- {name: Payment Systems, aliases: [payment processing, payments infrastructure, payments domain, payment methods, payment workflows]}
 - {name: Search Infrastructure, aliases: [lucene, solr]}
 - {name: GIS, aliases: [postgis, geospatial]}
 - {name: Ad Tech, aliases: [adtech, advertising systems]}
@@ -397,7 +397,7 @@ skills:
 - {name: Trading Systems, aliases: [low-latency trading, algorithmic trading, market data]}
 - {name: Quantitative Analysis, aliases: [quantitative research]}
 # --- soft skills (kept separate; the ranker down-weights them via IDF since they're everywhere) ---
-- {name: Communication, aliases: [communication skills, written and verbal communication, verbal communication]}
+- {name: Communication, aliases: [communication skills, written and verbal communication, verbal communication], block: [Inter-Process Communication, interprocess communication]}
 - {name: Collaboration, aliases: [cross-functional, cross functional, teamwork]}
 - {name: Mentorship, aliases: [mentoring]}
 - {name: Problem Solving, aliases: [problem-solving, analytical skills]}

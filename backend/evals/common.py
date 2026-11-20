@@ -17,6 +17,10 @@ RESULTS = EVAL_DIR / "results.json"
 REPORT = EVAL_DIR / "RESULTS.md"
 
 SECTIONS = ("extractor", "simulation", "grounding", "latency")
+AFTER_CAVEAT = (
+    "Caveat: the taxonomy fixes behind the 'after' run were chosen by looking at errors on this same sample, "
+    "so 'after' is an optimistic, in-sample estimate. A fresh sample would measure them fairly."
+)
 
 
 def now_iso() -> str:
@@ -120,6 +124,8 @@ def report(res: dict) -> str:
                 )
         r = ex.get("after") or ex.get("before")
         L += ["", f"Method: {r['method']}", ""]
+        if ex.get("after"):
+            L += [AFTER_CAVEAT, ""]
     sim = res.get("simulation")
     if sim:
         L += [
