@@ -46,7 +46,12 @@ it, which would inflate precision and recall.
   question-major.
 - Every finished run is appended to `llm_runs.jsonl`, with its full event trace. Rerunning resumes where it
   stopped.
-- On quota exhaustion or a provider outage the script stops cleanly and records nothing for that run. A model
-  answer in the wrong JSON shape counts as a fallback.
+- On quota exhaustion the script stops cleanly and records nothing for that run.
+- On a provider outage (a Gemini 5xx that persists after the client's own retries), the run is restarted from
+  scratch after 60 s, at most 3 times. Interrupted attempts are never recorded as runs; they go to
+  `llm_outages.jsonl` and are counted as `interrupted_attempts`.
+- A model answer in the wrong JSON shape counts as a fallback.
+- `python -m evals.recorded` then saves 3 passed runs (one per question, preferring one that needed the
+  retry) to `backend/data/recorded_runs.json`, which the app replays as "recorded runs".
 - The model name is printed at the start and stored with every run.
 - Default pacing is 20 s between runs, to stay under 12 requests/minute.

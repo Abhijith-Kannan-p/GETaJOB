@@ -18,6 +18,7 @@ def eval_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(common, "RESULTS", tmp_path / "results.json")
     monkeypatch.setattr(common, "REPORT", tmp_path / "RESULTS.md")
     monkeypatch.setattr(grounding, "RUNS_PATH", tmp_path / "llm_runs.jsonl")
+    monkeypatch.setattr(grounding, "OUTAGES_PATH", tmp_path / "llm_outages.jsonl")
     return tmp_path
 
 
@@ -170,3 +171,64 @@ def test_eval_endpoint_serves_offline_results_and_live_counters(client, db, monk
     assert body["offline"]["summary"]["simulation"]["n_simulations"] == 2
     assert body["live_grounding"]["counts"] == {"first_try": 2, "fallback": 1}
     assert client.get("/api/stats").json()["eval"] == {"simulation": {"agreement": 1.0, "n_simulations": 2}}
+
+
+# ---------------- recorded runs (slice 7) ----------------
+
+
+def _run(i, q, outcome, interrupted=None):
+    return {"i": i, "question": q, "outcome": outcome, "interrupted": interrupted, "profile": "backend",
+            "model": "m", "at": "t", "events": [{"type": "memory"}, {"type": "done"}]}
+
+
+def test_recorded_runs_are_passed_gemini_runs_one_per_question():
+    from evals import recorded
+
+    q = grounding.QUESTIONS
+    runs = [
+        _run(0, q[0], "fallback"),  # failed grounding: never replayed
+        _run(1, q[0], "first_try", interrupted="quota"),
+        _run(2, q[1], "first_try"),
+        _run(3, q[0], "first_try"),
+        _run(4, q[4], "after_retry"),  # shows the self-correction: preferred for one slot
+        _run(5, q[0], "first_try"),
+    ]
+    picked = recorded.choose(runs, 3)
+    assert [r["i"] for r in picked] == [4, 3, 2]
+    rec = recorded.to_recorded(picked[1])
+    assert rec["id"] == "run-3" and rec["profile"]["skills"] and [e["type"] for e in rec["events"]] == ["done"]
+
+
+def test_recorded_endpoint_serves_the_file_or_nothing(client, monkeypatch, tmp_path):  # noqa: F811
+    from app.api import agent
+
+    monkeypatch.setattr(agent, "RECORDED_RUNS", tmp_path / "missing.json")
+    agent._recorded.cache_clear()
+    assert client.get("/api/agent/recorded").json() == {"runs": []}
+    path = tmp_path / "recorded.json"
+    path.write_text(json.dumps([{"id": "run-1", "question": "q", "events": []}]), encoding="utf-8")
+    monkeypatch.setattr(agent, "RECORDED_RUNS", path)
+    agent._recorded.cache_clear()
+    assert client.get("/api/agent/recorded").json()["runs"][0]["id"] == "run-1"
+    agent._recorded.cache_clear()
+
+
+def test_provider_outage_retries_the_run_and_is_logged_but_never_recorded(client, eval_dir):  # noqa: F811
+    from app.llm.client import ProviderUnavailable
+
+    calls = {"n": 0}
+
+    def flaky(c):
+        calls["n"] += 1
+        return FakeLLM([ProviderUnavailable("503")]) if calls["n"] == 1 else _fake(c)
+
+    assert grounding.run(1, pause=0, llm_factory=flaky, embedder=None, outage_pause=0) == 0
+    assert [r["outcome"] for r in grounding.load_runs()] == ["first_try"]  # the retry, not the outage
+    assert [o["kind"] for o in grounding.load_outages()] == ["provider"]
+    assert grounding.summarise(grounding.load_runs())["interrupted_attempts"] == 1
+
+    def down(c):
+        return FakeLLM([ProviderUnavailable("503")])
+
+    assert grounding.run(2, pause=0, llm_factory=down, embedder=None, outage_retries=2, outage_pause=0) == 2
+    assert len(grounding.load_outages()) == 1 + 3 and len(grounding.load_runs()) == 1

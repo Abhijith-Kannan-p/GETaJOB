@@ -58,6 +58,22 @@ export type Grounding = {
   kept: number;
   dropped: { text: string; reason: string }[];
   outcome: "first_try" | "after_retry" | "fallback" | "rules_only";
+  interrupted?: "quota" | "provider" | "bad_output" | null;
+};
+
+// A real past Gemini run for a SAMPLE profile, replayed unchanged when the live model is unavailable.
+export type RecordedRun = {
+  id: string;
+  question: string;
+  profile_name: string;
+  profile: { skills: string[]; target_roles: string[]; remote_ok: boolean; locations: string[] };
+  model: string;
+  recorded_at: string;
+  outcome: "first_try" | "after_retry";
+  events: AgentEvent[];
+};
+export const recordedApi = {
+  list: () => req<{ runs: RecordedRun[] }>("GET", "/api/agent/recorded").then((r) => r.runs),
 };
 export type StoredAnswer = {
   narrative: Narrative;

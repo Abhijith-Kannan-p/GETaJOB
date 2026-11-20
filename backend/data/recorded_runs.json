@@ -1,0 +1,456 @@
+[
+ {
+  "id": "run-9",
+  "question": "Which jobs fit me best right now?",
+  "profile_name": "fullstack",
+  "profile": {
+   "skills": [
+    "JavaScript",
+    "TypeScript",
+    "React",
+    "Node.js",
+    "SQL"
+   ],
+   "target_roles": [
+    "full stack engineer intern"
+   ],
+   "remote_ok": true,
+   "locations": []
+  },
+  "model": "gemini-3.5-flash-lite",
+  "recorded_at": "2026-11-20T18:06:36+00:00",
+  "outcome": "after_retry",
+  "events": [
+   {
+    "type": "start",
+    "mode": "llm",
+    "max_llm_calls": 4
+   },
+   {
+    "type": "thinking",
+    "round": 1
+   },
+   {
+    "type": "tool_call",
+    "name": "rank_jobs",
+    "args": {
+     "limit": 5
+    },
+    "by": "model"
+   },
+   {
+    "type": "tool_result",
+    "name": "rank_jobs",
+    "facts": [
+     {
+      "id": "F2",
+      "text": "Job 46 \"2027 - Software Engineering Intern, AMER\" at MongoDB (Austin; New York City; San Francisco) ranks #1 of 150 for your profile (score 0.73). Skills you match: JavaScript, Node.js. Required skills you lack: Computer Science Degree, Data Structures, Algorithms, Java, Python, Go, C++, Object-Oriented Programming."
+     },
+     {
+      "id": "F3",
+      "text": "Job 13 \"Software Engineer Intern 2027 (USA)\" at Pinterest (San Francisco, CA, US; Remote, US, remote) ranks #2 of 150 for your profile (score 0.73). Skills you match: JavaScript, TypeScript, React. Required skills you lack: Data Structures, Python, Java, Go, C++, Git, Open Source, Collaboration."
+     },
+     {
+      "id": "F4",
+      "text": "Job 106 \"2027 - Summer Software Engineer Intern, Dublin\" at MongoDB (Dublin) ranks #3 of 150 for your profile (score 0.71). Skills you match: JavaScript, Node.js. Required skills you lack: Computer Science Degree, Data Structures, Algorithms, Java, Python, Go, C++, Object-Oriented Programming."
+     },
+     {
+      "id": "F5",
+      "text": "Job 76 \"2027 - Software Engineer Intern, Dublin - 6 Month Internship\" at MongoDB (Dublin) ranks #4 of 150 for your profile (score 0.70). Skills you match: JavaScript, Node.js. Required skills you lack: Computer Science Degree, Data Structures, Algorithms, Java, Python, Go, C++, Object-Oriented Programming."
+     },
+     {
+      "id": "F6",
+      "text": "Job 73 \"University Grad Software Engineer 2027 (USA)\" at Pinterest (San Francisco, CA, US; Remote, US, remote) ranks #5 of 150 for your profile (score 0.67). Skills you match: JavaScript, TypeScript, React. Required skills you lack: Computer Science Degree, Open Source, Data Structures, Algorithms, Python, Java, Go, C++, Communication, Collaboration."
+     }
+    ]
+   },
+   {
+    "type": "thinking",
+    "round": 2
+   },
+   {
+    "type": "thinking",
+    "round": "narrative"
+   },
+   {
+    "type": "check",
+    "attempt": 1,
+    "passed": false,
+    "violations": [
+     {
+      "text": "The best matching roles for you right now are full stack engineer intern positions at MongoDB and Pinterest.",
+      "reason": "skill Full-Stack Development not in cited facts"
+     },
+     {
+      "text": "Practice ES6 features",
+      "reason": "step: number 6 not in cited facts"
+     }
+    ]
+   },
+   {
+    "type": "thinking",
+    "round": "narrative retry"
+   },
+   {
+    "type": "check",
+    "attempt": 2,
+    "passed": true,
+    "violations": []
+   },
+   {
+    "type": "narrative",
+    "source": "llm",
+    "narrative": {
+     "headline": {
+      "text": "The best fitting roles for you right now are full stack engineer intern positions at MongoDB and Pinterest.",
+      "facts": [
+       "F1",
+       "F2",
+       "F3"
+      ]
+     },
+     "points": [
+      {
+       "text": "Job 46 is a software engineering intern role at MongoDB matching your JavaScript and Node.js skills.",
+       "facts": [
+        "F2"
+       ]
+      },
+      {
+       "text": "Job 13 is a software engineer intern role at Pinterest matching your JavaScript, TypeScript, and React skills.",
+       "facts": [
+        "F3"
+       ]
+      }
+     ],
+     "next_steps": [
+      {
+       "skill": "JavaScript",
+       "why": "JavaScript is matched across your top job options at MongoDB and Pinterest.",
+       "facts": [
+        "F2",
+        "F3"
+       ],
+       "steps": [
+        "Build a small application using JavaScript"
+       ]
+      }
+     ]
+    },
+    "facts": {
+     "F1": "Your profile: skills JavaScript, Node.js, React, SQL, TypeScript; target roles full stack engineer intern; levels intern, new_grad, entry; remote ok; locations none.",
+     "F2": "Job 46 \"2027 - Software Engineering Intern, AMER\" at MongoDB (Austin; New York City; San Francisco) ranks #1 of 150 for your profile (score 0.73). Skills you match: JavaScript, Node.js. Required skills you lack: Computer Science Degree, Data Structures, Algorithms, Java, Python, Go, C++, Object-Oriented Programming.",
+     "F3": "Job 13 \"Software Engineer Intern 2027 (USA)\" at Pinterest (San Francisco, CA, US; Remote, US, remote) ranks #2 of 150 for your profile (score 0.73). Skills you match: JavaScript, TypeScript, React. Required skills you lack: Data Structures, Python, Java, Go, C++, Git, Open Source, Collaboration.",
+     "F4": "Job 106 \"2027 - Summer Software Engineer Intern, Dublin\" at MongoDB (Dublin) ranks #3 of 150 for your profile (score 0.71). Skills you match: JavaScript, Node.js. Required skills you lack: Computer Science Degree, Data Structures, Algorithms, Java, Python, Go, C++, Object-Oriented Programming.",
+     "F5": "Job 76 \"2027 - Software Engineer Intern, Dublin - 6 Month Internship\" at MongoDB (Dublin) ranks #4 of 150 for your profile (score 0.70). Skills you match: JavaScript, Node.js. Required skills you lack: Computer Science Degree, Data Structures, Algorithms, Java, Python, Go, C++, Object-Oriented Programming.",
+     "F6": "Job 73 \"University Grad Software Engineer 2027 (USA)\" at Pinterest (San Francisco, CA, US; Remote, US, remote) ranks #5 of 150 for your profile (score 0.67). Skills you match: JavaScript, TypeScript, React. Required skills you lack: Computer Science Degree, Open Source, Data Structures, Algorithms, Python, Java, Go, C++, Communication, Collaboration."
+    },
+    "grounding": {
+     "kept": 4,
+     "dropped": [
+      {
+       "text": "The best matching roles for you right now are full stack engineer intern positions at MongoDB and Pinterest.",
+       "reason": "skill Full-Stack Development not in cited facts"
+      },
+      {
+       "text": "Practice ES6 features",
+       "reason": "step: number 6 not in cited facts"
+      }
+     ],
+     "outcome": "after_retry",
+     "interrupted": null
+    },
+    "degraded": null,
+    "disclaimer": "Rankings show how this app orders jobs for your profile, not your chances of being hired."
+   },
+   {
+    "type": "done",
+    "llm_calls": 4,
+    "ms": 6105
+   }
+  ]
+ },
+ {
+  "id": "run-0",
+  "question": "What should I learn next?",
+  "profile_name": "backend",
+  "profile": {
+   "skills": [
+    "Python",
+    "SQL",
+    "Git",
+    "Docker",
+    "REST APIs"
+   ],
+   "target_roles": [
+    "backend engineer intern"
+   ],
+   "remote_ok": true,
+   "locations": []
+  },
+  "model": "gemini-3.5-flash-lite",
+  "recorded_at": "2026-11-20T17:59:39+00:00",
+  "outcome": "first_try",
+  "events": [
+   {
+    "type": "start",
+    "mode": "llm",
+    "max_llm_calls": 4
+   },
+   {
+    "type": "thinking",
+    "round": 1
+   },
+   {
+    "type": "tool_call",
+    "name": "best_skills",
+    "args": {},
+    "by": "model"
+   },
+   {
+    "type": "tool_result",
+    "name": "best_skills",
+    "facts": [
+     {
+      "id": "F2",
+      "text": "Adding Unit Testing: 9 jobs in your pool list Unit Testing and move up 4 places on average; 0 would enter your top 20; effort about 10 hours (the author's estimate)."
+     },
+     {
+      "id": "F3",
+      "text": "Adding Networking: 20 jobs in your pool list Networking and move up 8.6 places on average; 3 would enter your top 20; effort about 30 hours (the author's estimate)."
+     },
+     {
+      "id": "F4",
+      "text": "Adding Object-Oriented Programming: 9 jobs in your pool list Object-Oriented Programming and move up 6.6 places on average; 3 would enter your top 20; effort about 30 hours (the author's estimate)."
+     },
+     {
+      "id": "F5",
+      "text": "Suggested plan (greedy, best ranking gain per hour): Unit Testing, CI/CD, Data Structures; about 50 hours in total; the median rank of the 33 jobs that list them goes from #27 to #21."
+     }
+    ]
+   },
+   {
+    "type": "thinking",
+    "round": 2
+   },
+   {
+    "type": "thinking",
+    "round": "narrative"
+   },
+   {
+    "type": "check",
+    "attempt": 1,
+    "passed": true,
+    "violations": []
+   },
+   {
+    "type": "narrative",
+    "source": "llm",
+    "narrative": {
+     "headline": {
+      "text": "You should learn Unit Testing next based on your profile.",
+      "facts": [
+       "F2",
+       "F5"
+      ]
+     },
+     "points": [
+      {
+       "text": "Unit Testing takes about 10 hours of effort.",
+       "facts": [
+        "F2"
+       ]
+      },
+      {
+       "text": "Unit Testing is part of the suggested plan.",
+       "facts": [
+        "F5"
+       ]
+      }
+     ],
+     "next_steps": [
+      {
+       "skill": "Unit Testing",
+       "why": "Unit Testing requires about 10 hours of effort and helps you move up in your job pool.",
+       "facts": [
+        "F1",
+        "F2"
+       ],
+       "steps": [
+        "Write tests for Python code"
+       ]
+      }
+     ]
+    },
+    "facts": {
+     "F1": "Your profile: skills Docker, Git, Python, REST APIs, SQL; target roles backend engineer intern; levels intern, new_grad, entry; remote ok; locations none.",
+     "F2": "Adding Unit Testing: 9 jobs in your pool list Unit Testing and move up 4 places on average; 0 would enter your top 20; effort about 10 hours (the author's estimate).",
+     "F3": "Adding Networking: 20 jobs in your pool list Networking and move up 8.6 places on average; 3 would enter your top 20; effort about 30 hours (the author's estimate).",
+     "F4": "Adding Object-Oriented Programming: 9 jobs in your pool list Object-Oriented Programming and move up 6.6 places on average; 3 would enter your top 20; effort about 30 hours (the author's estimate).",
+     "F5": "Suggested plan (greedy, best ranking gain per hour): Unit Testing, CI/CD, Data Structures; about 50 hours in total; the median rank of the 33 jobs that list them goes from #27 to #21."
+    },
+    "grounding": {
+     "kept": 4,
+     "dropped": [],
+     "outcome": "first_try",
+     "interrupted": null
+    },
+    "degraded": null,
+    "disclaimer": "Rankings show how this app orders jobs for your profile, not your chances of being hired."
+   },
+   {
+    "type": "done",
+    "llm_calls": 3,
+    "ms": 10934
+   }
+  ]
+ },
+ {
+  "id": "run-28",
+  "question": "Why am I not ranking higher for this job?",
+  "profile_name": "backend",
+  "profile": {
+   "skills": [
+    "Python",
+    "SQL",
+    "Git",
+    "Docker",
+    "REST APIs"
+   ],
+   "target_roles": [
+    "backend engineer intern"
+   ],
+   "remote_ok": true,
+   "locations": []
+  },
+  "model": "gemini-3.5-flash-lite",
+  "recorded_at": "2026-11-20T18:15:01+00:00",
+  "outcome": "first_try",
+  "events": [
+   {
+    "type": "start",
+    "mode": "llm",
+    "max_llm_calls": 4
+   },
+   {
+    "type": "thinking",
+    "round": 1
+   },
+   {
+    "type": "tool_call",
+    "name": "explain_job",
+    "args": {
+     "job_id": 76
+    },
+    "by": "model"
+   },
+   {
+    "type": "tool_result",
+    "name": "explain_job",
+    "facts": [
+     {
+      "id": "F2",
+      "text": "For job 76 \"2027 - Software Engineer Intern, Dublin - 6 Month Internship\" at MongoDB (Dublin) you rank #5 of 150 (score 0.66). Skills you match: Python."
+     },
+     {
+      "id": "F3",
+      "text": "Job 76 lists skills you lack: Node.js (required, 12% of its skill weight), Object-Oriented Programming (required, 11% of its skill weight), Data Structures (required, 10% of its skill weight), C++ (required, 9% of its skill weight), Algorithms (required, 9% of its skill weight), Go (required, 7% of its skill weight)."
+     },
+     {
+      "id": "F4",
+      "text": "Adding Object-Oriented Programming: job 76 would move from #5 to #3 (up 2); 9 jobs in your pool list Object-Oriented Programming and move up 6.6 places on average; 3 would enter your top 20; effort about 30 hours (the author's estimate)."
+     },
+     {
+      "id": "F5",
+      "text": "Adding Algorithms: job 76 would move from #5 to #3 (up 2); 19 jobs in your pool list Algorithms and move up 3.8 places on average; 3 would enter your top 20; effort about 30 hours (the author's estimate)."
+     },
+     {
+      "id": "F6",
+      "text": "Adding Node.js: job 76 would move from #5 to #3 (up 2); 6 jobs in your pool list Node.js and move up 3.7 places on average; 0 would enter your top 20; effort about 30 hours (the author's estimate)."
+     },
+     {
+      "id": "F7",
+      "text": "Suggested plan (greedy, best ranking gain per hour): Object-Oriented Programming; about 30 hours in total; the median rank of the 9 jobs that list them goes from #18 to #7; job 76 goes from #5 to #3."
+     }
+    ]
+   },
+   {
+    "type": "thinking",
+    "round": 2
+   },
+   {
+    "type": "thinking",
+    "round": "narrative"
+   },
+   {
+    "type": "check",
+    "attempt": 1,
+    "passed": true,
+    "violations": []
+   },
+   {
+    "type": "narrative",
+    "source": "llm",
+    "narrative": {
+     "headline": {
+      "text": "You are not ranking higher because job 76 requires several skills you lack, such as Node.js, Object-Oriented Programming, Data Structures, C++, Algorithms, and Go.",
+      "facts": [
+       "F3"
+      ]
+     },
+     "points": [
+      {
+       "text": "For job 76, you currently rank #5 out of 150 matching only Python from your Python skill.",
+       "facts": [
+        "F1",
+        "F2"
+       ]
+      },
+      {
+       "text": "Adding Object-Oriented Programming, Algorithms, or Node.js would improve your rank for job 76.",
+       "facts": [
+        "F4",
+        "F5",
+        "F6"
+       ]
+      }
+     ],
+     "next_steps": [
+      {
+       "skill": "Object-Oriented Programming",
+       "why": "Adding Object-Oriented Programming helps job 76 move from #5 to #3.",
+       "facts": [
+        "F4"
+       ],
+       "steps": [
+        "Practice Object-Oriented Programming by building a small project."
+       ]
+      }
+     ]
+    },
+    "facts": {
+     "F1": "Your profile: skills Docker, Git, Python, REST APIs, SQL; target roles backend engineer intern; levels intern, new_grad, entry; remote ok; locations none.",
+     "F2": "For job 76 \"2027 - Software Engineer Intern, Dublin - 6 Month Internship\" at MongoDB (Dublin) you rank #5 of 150 (score 0.66). Skills you match: Python.",
+     "F3": "Job 76 lists skills you lack: Node.js (required, 12% of its skill weight), Object-Oriented Programming (required, 11% of its skill weight), Data Structures (required, 10% of its skill weight), C++ (required, 9% of its skill weight), Algorithms (required, 9% of its skill weight), Go (required, 7% of its skill weight).",
+     "F4": "Adding Object-Oriented Programming: job 76 would move from #5 to #3 (up 2); 9 jobs in your pool list Object-Oriented Programming and move up 6.6 places on average; 3 would enter your top 20; effort about 30 hours (the author's estimate).",
+     "F5": "Adding Algorithms: job 76 would move from #5 to #3 (up 2); 19 jobs in your pool list Algorithms and move up 3.8 places on average; 3 would enter your top 20; effort about 30 hours (the author's estimate).",
+     "F6": "Adding Node.js: job 76 would move from #5 to #3 (up 2); 6 jobs in your pool list Node.js and move up 3.7 places on average; 0 would enter your top 20; effort about 30 hours (the author's estimate).",
+     "F7": "Suggested plan (greedy, best ranking gain per hour): Object-Oriented Programming; about 30 hours in total; the median rank of the 9 jobs that list them goes from #18 to #7; job 76 goes from #5 to #3."
+    },
+    "grounding": {
+     "kept": 4,
+     "dropped": [],
+     "outcome": "first_try",
+     "interrupted": null
+    },
+    "degraded": null,
+    "disclaimer": "Rankings show how this app orders jobs for your profile, not your chances of being hired."
+   },
+   {
+    "type": "done",
+    "llm_calls": 3,
+    "ms": 5950
+   }
+  ]
+ }
+]

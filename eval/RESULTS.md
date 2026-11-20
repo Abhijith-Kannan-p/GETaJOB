@@ -1,6 +1,6 @@
 # GETaJOB eval results
 
-Generated from `eval/results.json` (updated 2026-11-20T17:33:31+00:00).
+Generated from `eval/results.json` (updated 2026-11-20T18:17:29+00:00).
 Every number below was measured by the scripts in `backend/evals/`; sections not yet run are omitted.
 
 ## 1. Skill extractor (rule-based, no LLM)
@@ -19,6 +19,18 @@ Caveat: the taxonomy fixes behind the 'after' run were chosen by looking at erro
 Agreement **100.0%** over **1532** simulations (229800 job-rank comparisons, 7 profiles); max score difference 0.00e+00.
 
 Method: Real candidate pools from the database for 7 synthetic profiles (UI role buttons + popular-skill buttons). Each simulation adds one missing skill (every skill present in the pool) or a greedy plan's skill set, then compares Simulator.ranks_with/scores_with against scorer.rank_pool on the extended profile. A simulation agrees when the whole rank order is identical and every score is within 1e-12.
+
+## 3. LLM narrative grounding
+
+| Outcome | Runs | Share |
+|---|---|---|
+| first try | 31 | 88.6% |
+| after retry | 4 | 11.4% |
+| fallback | 0 | 0.0% |
+
+n = 35 runs, model `gemini-3.5-flash-lite`; mean 3.11 LLM calls per run.
+
+Method: Real agent runs (Gemini function calling + structured narrative) against the local database: 7 synthetic profiles x 5 questions in a fixed order (the four preset buttons plus a per-job question on each profile's 5th-ranked job). Outcome per run: grounding check passed on the first narrative attempt, passed after the single corrective retry, or failed twice / returned unusable JSON (rule-based fallback). Runs interrupted by quota or provider outages are excluded and listed as interrupted.
 
 ## 4. Search latency (`GET /api/search`)
 

@@ -22,6 +22,7 @@ from evals.common import EVAL_DIR, now_iso, save_section
 from evals.profiles import PROFILES
 
 RUNS_PATH = EVAL_DIR / "llm_runs.jsonl"
+OUTAGES_PATH = EVAL_DIR / "llm_outages.jsonl"  # interrupted attempts: not grounding results, but reported
 QUESTIONS = [
     "What should I learn next?",
     "Which jobs fit me best right now?",
@@ -97,6 +98,7 @@ def summarise(runs: list[dict]) -> dict:
         "rates": {k: round(counts.get(k, 0) / n, 4) if n else 0.0 for k in OUTCOMES},
         "bad_output_runs": sum(1 for r in runs if r.get("interrupted") == "bad_output"),
         "first_attempt_violation_reasons": dict(reasons.most_common()),
+        "interrupted_attempts": len(load_outages()),
         "mean_llm_calls": round(sum(r["llm_calls"] for r in runs) / n, 3) if n else 0.0,
         "median_ms": sorted(r["ms"] for r in runs)[n // 2] if n else None,
         "by_question": {
@@ -111,8 +113,27 @@ def fifth_job(ctx) -> int | None:
     return sim.base_order[4] if len(sim.base_order) >= 5 else None
 
 
-def run(n: int, pause: float, llm_factory=None, embedder="real", conn_factory=None) -> int:
-    """Run until n runs are recorded. Returns 0 when done, 2 when stopped early (quota/outage)."""
+def load_outages() -> list[dict]:
+    if not OUTAGES_PATH.exists():
+        return []
+    with OUTAGES_PATH.open(encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def run(
+    n: int,
+    pause: float,
+    llm_factory=None,
+    embedder="real",
+    conn_factory=None,
+    outage_retries: int = 3,
+    outage_pause: float = 60.0,
+) -> int:
+    """Run until n runs are recorded. Returns 0 when done, 2 when stopped early.
+
+    A provider outage (5xx after the client's own retries) restarts that run from scratch after a pause, at most
+    `outage_retries` times; quota exhaustion stops at once. Interrupted attempts are never recorded as runs
+    (they say nothing about grounding) but are logged to llm_outages.jsonl and counted in the summary."""
     from app.agent.run import run_agent
     from app.agent.tools import AgentContext
     from app.db import conn as default_conn
@@ -125,20 +146,28 @@ def run(n: int, pause: float, llm_factory=None, embedder="real", conn_factory=No
     todo = [(i, p, q) for i, (p, q) in enumerate(grid() * (n // len(grid()) + 1)) if i < n and i not in done]
     print(f"{len(done)} runs already recorded; {len(todo)} to go")
     for k, (i, pname, q) in enumerate(todo):
-        with conn_factory() as c:
-            llm = llm_factory(c)
-            if k == 0:
-                print(f"model: {getattr(llm, 'model', type(llm).__name__)}")
-            ctx = AgentContext(c, emb, PROFILES[pname])
-            job_id = fifth_job(ctx) if q == JOB_QUESTION else None
-            events = list(run_agent(ctx, QUESTIONS[q], llm, job_id=job_id))
-        rec = record(i, pname, q, job_id, events, getattr(llm, "model", type(llm).__name__))
-        if rec["interrupted"] in ("quota", "provider"):
-            print(
-                f"run {i}: stopped by {rec['interrupted']} ({rec['llm_calls']} calls made); not recorded. "
-                "Rerun later to resume."
-            )
-            return 2
+        for attempt in range(outage_retries + 1):
+            with conn_factory() as c:
+                llm = llm_factory(c)
+                if k == 0 and attempt == 0:
+                    print(f"model: {getattr(llm, 'model', type(llm).__name__)}")
+                ctx = AgentContext(c, emb, PROFILES[pname])
+                job_id = fifth_job(ctx) if q == JOB_QUESTION else None
+                events = list(run_agent(ctx, QUESTIONS[q], llm, job_id=job_id))
+            rec = record(i, pname, q, job_id, events, getattr(llm, "model", type(llm).__name__))
+            if rec["interrupted"] not in ("quota", "provider"):
+                break
+            outage = {"i": i, "at": rec["at"], "kind": rec["interrupted"], "calls": rec["llm_calls"]}
+            with OUTAGES_PATH.open("a", encoding="utf-8", newline="\n") as f:
+                f.write(json.dumps(outage) + "\n")
+            if rec["interrupted"] == "quota" or attempt == outage_retries:
+                print(
+                    f"run {i}: stopped by {rec['interrupted']} ({rec['llm_calls']} calls made); not recorded. "
+                    "Rerun later to resume."
+                )
+                return 2
+            print(f"run {i}: provider outage ({rec['llm_calls']} calls made); retrying in {outage_pause:.0f}s")
+            time.sleep(outage_pause)
         append_run(rec)
         print(f"run {i:3d} {pname:10s} q{q} -> {rec['outcome']:11s} calls {rec['llm_calls']} {rec['ms'] / 1000:.1f}s")
         if pause and k < len(todo) - 1:

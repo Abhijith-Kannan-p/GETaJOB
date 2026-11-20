@@ -6,9 +6,61 @@ on the 150-job fixture snapshot for a profile with Python, SQL, pandas, Git and 
 internships: *"Data Science Intern: adding NumPy, R and Keras moves it from #41 to #13 (about 70 h, my
 estimates)."* These are the ranker's own numbers, not a hiring prediction.
 
-> Status: slices 1–6 of 7 (ingestion and hybrid search; free-tier deploy; ranker and Why-Not-Me; grounded
-> agent with session memory; UI; evals). One eval is still to run: LLM grounding with live Gemini. CI and the
-> remaining hardening come in slice 7. Nothing below describes a feature that does not exist yet.
+> Status: all 7 slices built: ingestion and hybrid search, free-tier deploy, ranker and Why-Not-Me, grounded
+> agent with session memory, UI, evals, and CI with a recorded-run fallback. Nothing below describes a
+> feature that does not exist. Known gaps are listed under [Limitations](#limitations).
+
+**Live:** API `https://getajob-api.onrender.com` (`/health`, `/api/stats`, `/api/eval`); the web app runs on
+Vercel. Both are on free tiers: the API sleeps when idle, so the first request can take up to a minute.
+
+| Ranked jobs with a score breakdown | Why-Not-Me for one job |
+|---|---|
+| ![Ranked jobs, dark theme](docs/screenshots/ranked-dark.png) | ![Why-Not-Me panel](docs/screenshots/why-not-me.png) |
+| **Hybrid search** | **Recorded run, shown when the live AI is unavailable** |
+| ![Search](docs/screenshots/search.png) | ![Recorded run](docs/screenshots/recorded-run.png) |
+
+The screenshots come from the local production build on the 150-posting snapshot. [Measured eval
+numbers](#evals) are on `/eval` ([screenshot](docs/screenshots/eval.png)).
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Sources[Public job-board APIs]
+    GH[Greenhouse]
+    LV[Lever]
+  end
+  subgraph Nightly[GitHub Actions, nightly]
+    ING[fetch, clean into sections,<br/>rule-based skill extraction,<br/>priority cap 1,000]
+  end
+  subgraph DB[Neon Postgres + pgvector]
+    JOBS[(jobs: HNSW + GIN full-text)]
+    MEM[(anonymous sessions, plan,<br/>messages, quota counters)]
+  end
+  subgraph API[Render: FastAPI, 1 worker, Docker]
+    SEARCH[hybrid search<br/>RRF in one SQL query]
+    RANK[transparent 6-term ranker]
+    WNM[Why-Not-Me simulator<br/>exact vs full re-rank]
+    AGENT[agent: Gemini tool calls,<br/>grounding check + 1 retry,<br/>SSE trace]
+    GUARD[LLM wrapper: timeout, retries,<br/>quota guard, token log]
+  end
+  WEB[Vercel: Next.js UI]
+  GEM[Gemini API<br/>embeddings + chat]
+
+  GH & LV --> ING --> JOBS
+  ING -. embeddings, within budget .-> GUARD
+  WEB -- HTTPS / SSE --> SEARCH & RANK & AGENT
+  SEARCH --> JOBS
+  RANK --> SEARCH
+  WNM --> RANK
+  AGENT --> RANK & WNM & SEARCH
+  AGENT --> MEM
+  SEARCH & AGENT --> GUARD --> GEM
+```
+
+Every Gemini call goes through one wrapper (timeout, bounded retries, token logging, fail-closed quota
+guard). When Gemini is unavailable, search falls back to full-text and the assistant to a rule-based answer.
+The assistant can also replay a recorded real run, labelled as such.
 
 ## Data sources
 
@@ -176,6 +228,12 @@ question ─> Gemini (function calling, ≤ 2 rounds) ─> tools over the REAL r
 - **Forget me** (`DELETE /api/me`) deletes the profile, plan, messages and the cached profile embedding, and
   clears in-memory caches.
 - **Privacy guard:** a question that looks like it contains an email address or phone number is refused.
+- **Recorded runs** (`GET /api/agent/recorded`, made by `python -m evals.recorded`):
+  - When the live model could not answer (no key, quota used up, provider outage), you still get the
+    rule-based answer for *your* profile.
+  - Below it you can open a **recorded run**: a real earlier Gemini run for a *sample* profile, replayed
+    unchanged with its full trace. It is labelled with its date and model, and its next steps cannot be added
+    to your plan.
 
 ## Evals
 
@@ -189,7 +247,7 @@ and a section that has not been run shows no number.
 | Search latency, local | p50 **22 ms**, p95 **33 ms** round trip; server time p50 4 ms, p95 6 ms (n = 60, 150 jobs, cached query embeddings) |
 | Search latency, deployed (Render free, Singapore) | p50 **181 ms**, p95 **223 ms** round trip from the author's machine; server time p50 16 ms, p95 19 ms (n = 60, about 1,000 jobs, warm instance; first request 3.4 s) |
 | Skill extractor P/R/F1 | before fixes: P **88.9%**, R **86.2%**, F1 **87.5%**; after taxonomy fixes: P **90.6%**, R **88.7%**, F1 **89.7%** (70 postings, 30 companies, 993 labelled pairs) |
-| LLM grounding (first try / after retry / fallback) | **not run yet** (real Gemini, ≤ 140 calls for n = 35) |
+| LLM grounding (first try / after retry / fallback) | **88.6% / 11.4% / 0%** of 35 real Gemini runs (`gemini-3.5-flash-lite`, 7 synthetic profiles × 5 questions); 3.1 LLM calls per run on average (limit 4); 2 attempts hit Gemini server errors, were retried and are reported separately |
 
 About the extractor numbers:
 - The labels were made by an AI coding assistant (Claude) at my request. It read every posting in full and
@@ -291,3 +349,23 @@ personal data. Search queries are embedded via the Gemini API when semantic sear
   free-text note is embedded for matching but never sent to the chat model.
 - **Nothing is stored server-side until you use the assistant or the plan.** Then it is kept under an
   anonymous id and deleted after 30 days idle, or immediately with **Forget me**.
+
+## Limitations
+
+- **Small, curated corpus.** About 1,000 active postings from 30 Greenhouse/Lever boards, mostly global
+  companies. India-based startups on other applicant-tracking systems are not covered.
+- **Skill extraction is rule-based.** F1 is 89.7% on 70 postings, and that figure is in-sample with
+  AI-made labels (see [Evals](#evals)). It still counts partner teams ("work with Product Management")
+  and company names (Datadog on Datadog's own postings) as skills. A heading such as "The Okta Experience"
+  is read as a requirements section, so boilerplate under it can leak in.
+- **Why-Not-Me holds semantic similarity fixed.** It is exact for this ranker and this pool (100% agreement,
+  n = 1,532). Learning a skill in reality would also change the profile text, the retrieval pool and the
+  semantic term. The numbers rank jobs; they do not predict hiring.
+- **Effort hours are the author's estimates**, labelled as such in the UI.
+- **The assistant depends on a free tier.** At most 70 runs a day by design. Gemini's free tier sometimes
+  returns server errors; these are retried and then fall back to the rule-based answer.
+- **Free hosting.** Render sleeps when idle (cold start up to about a minute). One uvicorn worker, and
+  in-process rate windows, so this does not scale horizontally as is.
+- **Evals are small.** n is stated next to every number. There is a single annotator for the extractor
+  labels, and the grounding eval uses 7 synthetic profiles rather than real users.
+

@@ -10,6 +10,7 @@ import {
   Compass,
   Cpu,
   GraduationCap,
+  History,
   ListOrdered,
   Loader2,
   Plus,
@@ -18,7 +19,7 @@ import {
   Sparkles,
   Wand2,
 } from "lucide-react";
-import type { AgentEvent, Narrative } from "@/lib/session";
+import { recordedApi, type AgentEvent, type Narrative, type RecordedRun } from "@/lib/session";
 import { Button, Card, SectionLabel, cx } from "./ui";
 
 export const PRESETS = [
@@ -179,7 +180,7 @@ export function Answer({
 }: {
   final: Pick<Final, "narrative" | "facts" | "source"> & Partial<Pick<Final, "grounding" | "disclaimer" | "degraded">>;
   plannedSkills: string[];
-  onAddPlan: (skill: string) => void;
+  onAddPlan?: (skill: string) => void; // omitted = read-only (recorded runs)
 }) {
   const n: Narrative = final.narrative;
   const outcome = final.grounding?.outcome;
@@ -226,16 +227,18 @@ export function Answer({
                       </ul>
                     )}
                   </div>
-                  <Button
-                    size="sm"
-                    variant={planned ? "ghost" : "primary"}
-                    disabled={planned}
-                    onClick={() => onAddPlan(s.skill)}
-                    aria-label={planned ? `${s.skill} is in your plan` : `Add ${s.skill} to your plan`}
-                  >
-                    {planned ? <CheckCircle2 size={14} aria-hidden /> : <Plus size={14} aria-hidden />}
-                    {planned ? "In plan" : "Plan"}
-                  </Button>
+                  {onAddPlan && (
+                    <Button
+                      size="sm"
+                      variant={planned ? "ghost" : "primary"}
+                      disabled={planned}
+                      onClick={() => onAddPlan(s.skill)}
+                      aria-label={planned ? `${s.skill} is in your plan` : `Add ${s.skill} to your plan`}
+                    >
+                      {planned ? <CheckCircle2 size={14} aria-hidden /> : <Plus size={14} aria-hidden />}
+                      {planned ? "In plan" : "Plan"}
+                    </Button>
+                  )}
                 </li>
               );
             })}
@@ -254,6 +257,92 @@ export function Answer({
         </span>
       </p>
     </div>
+  );
+}
+
+/** Offered only when the live model could not answer (no key, quota used up, provider down). */
+function RecordedRuns() {
+  const [runs, setRuns] = useState<RecordedRun[] | null>(null);
+  const [idx, setIdx] = useState(0);
+  const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  if (!runs) {
+    return (
+      <div className="mt-4 rounded-xl bg-surface-2 p-3 text-sm">
+        <p className="text-muted">
+          The live AI could not answer just now, so the answer above is the rule-based summary for your profile. You can
+          also look at a <strong className="text-ink">recorded run</strong>: a real earlier Gemini run for a sample profile,
+          replayed unchanged.
+        </p>
+        <Button
+          className="mt-2"
+          size="sm"
+          variant="outline"
+          disabled={loading}
+          onClick={async () => {
+            setLoading(true);
+            setErr(null);
+            try {
+              const r = await recordedApi.list();
+              if (r.length) setRuns(r);
+              else setErr("No recorded runs are available.");
+            } catch {
+              setErr("Could not load the recorded runs.");
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          <History size={14} aria-hidden /> See a recorded run
+        </Button>
+        {err && <p className="mt-2 text-xs text-muted">{err}</p>}
+      </div>
+    );
+  }
+  const run = runs[idx];
+  const final = run.events.find((e) => e.type === "narrative") as Final | undefined;
+  return (
+    <section aria-label="Recorded run" className="mt-5 rounded-xl border border-dashed border-line-strong p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-warn-soft px-2.5 py-0.5 text-xs font-semibold text-warn-ink">Recorded run</span>
+        <span className="text-xs text-muted">
+          {run.model} · {run.recorded_at.slice(0, 10)} · sample profile, not yours
+        </span>
+      </div>
+      {runs.length > 1 && (
+        <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Choose a recorded run">
+          {runs.map((r, i) => (
+            <button
+              key={r.id}
+              type="button"
+              aria-pressed={i === idx}
+              onClick={() => setIdx(i)}
+              className={cx(
+                "rounded-lg px-2.5 py-1 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink",
+                i === idx ? "bg-accent font-medium text-on-accent" : "glass text-muted hover:text-ink",
+              )}
+            >
+              {r.question}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="mt-3 text-sm">
+        <span className="font-medium">Question:</span> {run.question}
+      </p>
+      <p className="mt-1 text-xs text-muted">
+        Sample profile: {run.profile.skills.join(", ")} · {run.profile.target_roles.join(", ")}
+      </p>
+      <div className="mt-3 rounded-xl border border-line bg-raised p-3">
+        <Trace events={run.events} running={false} />
+      </div>
+      {final && (
+        <div className="mt-4">
+          <Answer final={final} plannedSkills={[]} />
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -276,6 +365,15 @@ export function AssistantCard({
 }) {
   const [text, setText] = useState("");
   const final = (events.find((e) => e.type === "narrative") as Final | undefined) ?? lastAnswer;
+  const live = events.find((e) => e.type === "narrative") as Final | undefined;
+  const start = events.find((e) => e.type === "start");
+  // The live model could not answer this run: offline (no key / daily cap) or cut short by quota or an outage.
+  const aiDown =
+    !running &&
+    !!live &&
+    ((start?.type === "start" && start.mode === "offline") ||
+      live.grounding.interrupted === "quota" ||
+      live.grounding.interrupted === "provider");
   return (
     <Card className="p-5">
       <div className="flex items-center gap-3">
@@ -347,6 +445,7 @@ export function AssistantCard({
           <Answer final={final} plannedSkills={plannedSkills} onAddPlan={onAddPlan} />
         </div>
       )}
+      {aiDown && <RecordedRuns />}
     </Card>
   );
 }

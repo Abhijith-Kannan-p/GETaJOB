@@ -9,6 +9,7 @@ Limits, checked before any stream starts (so refusals are plain JSON errors):
 
 from __future__ import annotations
 
+import functools
 import itertools
 import json
 import logging
@@ -27,7 +28,7 @@ from app.agent.tools import AgentContext
 from app.api.limits import limiter
 from app.api.rank import ProfileIn
 from app.api.session import load_session, session_key
-from app.config import get_settings
+from app.config import DATA_DIR, get_settings
 from app.db import conn as db_conn
 from app.llm import quota
 
@@ -104,6 +105,27 @@ def _history(c, sid: str) -> list[dict]:
         if text:
             out.append({"role": r["role"], "text": text})
     return out
+
+
+RECORDED_RUNS = DATA_DIR / "recorded_runs.json"
+
+
+@functools.lru_cache(maxsize=1)
+def _recorded() -> tuple[dict, ...]:
+    if not RECORDED_RUNS.exists():
+        return ()
+    try:
+        return tuple(json.loads(RECORDED_RUNS.read_text(encoding="utf-8")))
+    except ValueError:
+        log.warning("recorded runs unreadable")
+        return ()
+
+
+@router.get("/agent/recorded")
+def recorded_runs():
+    """Real past Gemini runs for SAMPLE profiles (made by `python -m evals.recorded`), replayed unchanged when
+    the live model is unavailable. They are offered next to the user's rule-based answer, never instead of it."""
+    return {"runs": list(_recorded())}
 
 
 @router.post("/agent/run")

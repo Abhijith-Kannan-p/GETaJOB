@@ -38,8 +38,8 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql://getajob:getajob@localhost:5432/getajob_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build the production image (same Dockerfile Render uses)
         run: docker build -t getajob-api:ci .
       # Startup tolerates a missing DB (migration and session pruning are logged and skipped), but waits about
@@ -75,15 +75,16 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
       - run: npm run build
         env:
           NEXT_PUBLIC_API_URL: https://example.invalid  # build only; the real URL is set in Vercel
+      # After the build: Next generates route types (e.g. LayoutProps) during it; a fresh checkout has none.
+      - run: npx tsc --noEmit

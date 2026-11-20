@@ -45,7 +45,7 @@
     },
     "failures": []
   },
-  "updated_at": "2026-11-20T17:33:31+00:00",
+  "updated_at": "2026-11-20T18:17:29+00:00",
   "summary": {
     "extractor": {
       "f1": 0.8967,
@@ -57,6 +57,12 @@
     "simulation": {
       "agreement": 1.0,
       "n_simulations": 1532
+    },
+    "grounding": {
+      "first_try": 0.8857,
+      "after_retry": 0.1143,
+      "fallback": 0.0,
+      "n_runs": 35
     },
     "latency": {
       "local": {
@@ -369,6 +375,52 @@
           "example": "greenhouse:8255904"
         }
       ]
+    }
+  },
+  "grounding": {
+    "measured_at": "2026-11-20T18:17:29+00:00",
+    "method": "Real agent runs (Gemini function calling + structured narrative) against the local database: 7 synthetic profiles x 5 questions in a fixed order (the four preset buttons plus a per-job question on each profile's 5th-ranked job). Outcome per run: grounding check passed on the first narrative attempt, passed after the single corrective retry, or failed twice / returned unusable JSON (rule-based fallback). Runs interrupted by quota or provider outages are excluded and listed as interrupted.",
+    "model": "gemini-3.5-flash-lite",
+    "n_runs": 35,
+    "counts": {
+      "first_try": 31,
+      "after_retry": 4,
+      "fallback": 0
+    },
+    "rates": {
+      "first_try": 0.8857,
+      "after_retry": 0.1143,
+      "fallback": 0.0
+    },
+    "bad_output_runs": 0,
+    "first_attempt_violation_reasons": {
+      "skill Full-Stack Development not in cited facts": 1,
+      "step: number 6 not in cited facts": 1,
+      "step: skill Unit Testing not in cited facts": 1,
+      "step: skill Concurrency not in cited facts": 1,
+      "step: skill Cloud Security not in cited facts": 1
+    },
+    "interrupted_attempts": 2,
+    "mean_llm_calls": 3.114,
+    "median_ms": 5017,
+    "by_question": {
+      "What should I learn next?": {
+        "first_try": 7
+      },
+      "Which jobs fit me best right now?": {
+        "first_try": 5,
+        "after_retry": 2
+      },
+      "Why am I not ranking higher?": {
+        "first_try": 7
+      },
+      "Find remote roles for my skills": {
+        "first_try": 5,
+        "after_retry": 2
+      },
+      "Why am I not ranking higher for this job?": {
+        "first_try": 7
+      }
     }
   }
 }
