@@ -39,7 +39,7 @@ function FixRow({
           type="button"
           disabled={planned}
           onClick={() => onAddPlan(e.skill)}
-          className="mt-2 inline-flex items-center gap-1 rounded-lg bg-accent-soft px-2 py-1 text-xs font-medium text-accent-ink hover:bg-accent hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-60"
+          className="mt-2 inline-flex items-center gap-1 rounded-lg bg-accent-soft px-2 py-1 text-xs font-medium text-accent-ink hover:bg-accent hover:text-on-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-60"
         >
           {planned ? "✓ In your plan" : "+ Add to my plan"}
         </button>
@@ -91,7 +91,7 @@ export function GapPanel({
         role="dialog"
         aria-modal="true"
         aria-labelledby="gap-title"
-        className="h-full w-full max-w-lg overflow-y-auto glass bg-white/75 p-5 motion-safe:transition-transform"
+        className="h-full w-full max-w-lg overflow-y-auto glass bg-raised-strong p-5 dark:bg-[#111c33]/90 motion-safe:transition-transform"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -109,7 +109,7 @@ export function GapPanel({
 
         {loading && <p className="mt-6 text-sm text-muted">Simulating the ranker…</p>}
         {error && (
-          <p role="alert" className="mt-6 rounded-xl border border-red-300 bg-red-50 text-red-900 px-3 py-2 text-sm">
+          <p role="alert" className="mt-6 rounded-xl border border-bad/40 bg-bad-soft text-bad-ink px-3 py-2 text-sm">
             {error}
           </p>
         )}
@@ -199,7 +199,7 @@ export function GapPanel({
               <button
                 type="button"
                 onClick={() => onAsk(data.job?.id ?? null)}
-                className="w-full rounded-xl bg-navy px-4 py-2.5 text-sm font-medium text-cream hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                className="w-full rounded-xl bg-navy px-4 py-2.5 text-sm font-medium text-cream dark:bg-cream dark:text-navy hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
               >
                 Ask the assistant to explain {forJob ? "this job" : "this"} →
               </button>

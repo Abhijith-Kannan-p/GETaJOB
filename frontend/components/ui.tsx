@@ -30,7 +30,7 @@ export function Button({
         size === "sm" && "px-3 py-1.5 text-sm",
         size === "md" && "px-4 py-2.5 text-sm",
         size === "lg" && "px-6 py-3 text-base",
-        variant === "primary" && "bg-accent text-ink shadow-[0_8px_20px_-8px_rgb(255_107_91/0.7)] hover:bg-accent-strong",
+        variant === "primary" && "bg-accent text-on-accent shadow-[0_8px_20px_-8px_rgb(255_107_91/0.7)] hover:bg-accent-strong",
         variant === "outline" && "glass text-ink hover:border-accent hover:text-accent-ink",
         variant === "ghost" && "text-accent-ink hover:bg-accent-soft",
         className,
@@ -55,8 +55,8 @@ export function Pill({
         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors duration-150",
         ring,
         selected
-          ? "border-accent bg-accent text-ink shadow-sm"
-          : "border-white/70 bg-white/45 text-ink backdrop-blur hover:border-accent hover:text-accent-ink",
+          ? "border-accent bg-accent text-on-accent shadow-sm"
+          : "border-white/70 bg-raised text-ink backdrop-blur hover:border-accent hover:text-accent-ink",
         className,
       )}
     >
@@ -107,8 +107,8 @@ export function Banner({ tone, children }: { tone: "warn" | "bad" | "info"; chil
       role={tone === "bad" ? "alert" : "status"}
       className={cx(
         "rounded-xl border px-4 py-2.5 text-sm",
-        tone === "warn" && "border-amber-300 bg-amber-50 text-amber-900",
-        tone === "bad" && "border-red-300 bg-red-50 text-red-900",
+        tone === "warn" && "border-warn/40 bg-warn-soft text-warn-ink",
+        tone === "bad" && "border-bad/40 bg-bad-soft text-bad-ink",
         tone === "info" && "glass text-ink",
       )}
     >

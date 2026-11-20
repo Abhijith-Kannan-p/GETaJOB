@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Navy / cream / coral theme with frosted-glass surfaces. `dark:` utilities only apply under a .dark class,
-   which this app never sets, so a dark-mode OS still gets this theme. */
+/* Navy / cream / coral theme with frosted-glass surfaces, light (cream) and dark (navy).
+   next-themes puts .dark on <html>; `dark:` utilities and the token overrides below key off that class. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Design tokens. Coral (#FF6B5B) is for fills with navy text on top (5.7:1); on cream it is only ~2.4:1,
@@ -21,10 +21,19 @@
   --color-accent-strong: #f4513f;
   --color-accent-soft: rgb(255 107 91 / 0.16);
   --color-accent-ink: #a8321f;
+  --color-on-accent: #14213d; /* text on coral fills, both themes (5.7:1) */
+  --color-raised: rgb(255 255 255 / 0.55);
+  --color-raised-strong: rgb(255 255 255 / 0.82);
   --color-steel: #5b7db1;
   --color-good: #047857;
   --color-warn: #b45309;
   --color-bad: #b91c1c;
+  --color-good-soft: #dff3ea;
+  --color-good-ink: #065f46;
+  --color-warn-soft: #fdf1dc;
+  --color-warn-ink: #78350f;
+  --color-bad-soft: #fde7e7;
+  --color-bad-ink: #7f1d1d;
   --radius-card: 1.25rem;
 }
 
@@ -36,6 +45,31 @@
 html {
   color-scheme: light;
   scroll-behavior: smooth;
+}
+
+/* Dark: navy ground, cream ink, the same coral. Checked: cream on #0d1628 ~15:1, muted ~7.9:1, coral-ink ~7:1. */
+html.dark {
+  color-scheme: dark;
+  --color-bg: #0d1628;
+  --color-surface: rgb(255 255 255 / 0.06);
+  --color-surface-2: rgb(244 237 224 / 0.07);
+  --color-line: rgb(244 237 224 / 0.12);
+  --color-line-strong: rgb(244 237 224 / 0.26);
+  --color-ink: #f4ede0;
+  --color-muted: #aab2c5;
+  --color-accent-soft: rgb(255 107 91 / 0.18);
+  --color-accent-ink: #ff8f83;
+  --color-raised: rgb(255 255 255 / 0.06);
+  --color-raised-strong: rgb(255 255 255 / 0.11);
+  --color-good: #34d399;
+  --color-warn: #fbbf24;
+  --color-bad: #f87171;
+  --color-good-soft: rgb(52 211 153 / 0.14);
+  --color-good-ink: #a7f3d0;
+  --color-warn-soft: rgb(251 191 36 / 0.13);
+  --color-warn-ink: #fde68a;
+  --color-bad-soft: rgb(248 113 113 / 0.14);
+  --color-bad-ink: #fecaca;
 }
 
 body {
@@ -56,6 +90,12 @@ body::before {
     radial-gradient(44rem 32rem at 95% 35%, rgb(20 33 61 / 0.14), transparent 70%),
     radial-gradient(36rem 26rem at 30% 95%, rgb(91 125 177 / 0.16), transparent 70%);
 }
+html.dark body::before {
+  background:
+    radial-gradient(38rem 28rem at 8% 12%, rgb(255 107 91 / 0.14), transparent 70%),
+    radial-gradient(44rem 32rem at 95% 35%, rgb(91 125 177 / 0.18), transparent 70%),
+    radial-gradient(36rem 26rem at 30% 95%, rgb(244 237 224 / 0.05), transparent 70%);
+}
 
 /* Frosted glass: translucent white, blur, hairline highlight. In a layer so utilities can override it. */
 @layer components {
@@ -67,6 +107,13 @@ body::before {
   box-shadow:
     0 10px 30px -12px rgb(20 33 61 / 0.18),
     inset 0 1px 0 rgb(255 255 255 / 0.8);
+}
+.dark .glass {
+  background: rgb(255 255 255 / 0.05);
+  border-color: rgb(244 237 224 / 0.12);
+  box-shadow:
+    0 10px 30px -12px rgb(0 0 0 / 0.5),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
 }
 /* Glass on the navy hero. */
 .glass-dark {

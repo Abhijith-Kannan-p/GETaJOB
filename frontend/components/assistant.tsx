@@ -55,7 +55,11 @@ export function Trace({ events, running }: { events: AgentEvent[]; running: bool
           return (
             <li key={i} className="flex items-center gap-2 text-muted">
               <Sparkles size={14} aria-hidden />
-              {e.round === "narrative" ? "Writing the answer from the facts" : `Deciding what to check (round ${e.round})`}
+              {e.round === "narrative"
+                ? "Writing the answer from the facts"
+                : e.round === "narrative retry"
+                  ? "Asking the model to fix the problems"
+                  : `Deciding what to look up (round ${e.round})`}
             </li>
           );
         if (e.type === "tool_call")
@@ -84,6 +88,34 @@ export function Trace({ events, running }: { events: AgentEvent[]; running: bool
                   </ul>
                 </details>
               )}
+            </li>
+          );
+        if (e.type === "check")
+          return (
+            <li key={i} className={cx("flex items-start gap-2", e.passed ? "text-good" : "text-warn")}>
+              <ShieldCheck size={14} className="mt-0.5 shrink-0" aria-hidden />
+              {e.passed ? (
+                "Grounding check passed: every sentence is backed by the facts it cites"
+              ) : (
+                <details>
+                  <summary className="cursor-pointer select-none">
+                    Grounding check found {e.violations.length} problem{e.violations.length === 1 ? "" : "s"}
+                  </summary>
+                  <ul className="mt-1 space-y-0.5 text-xs text-muted">
+                    {e.violations.map((v, j) => (
+                      <li key={j}>
+                        <b>{v.reason}</b>: “{v.text}”
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </li>
+          );
+        if (e.type === "memory")
+          return (
+            <li key={i} className="ml-6 text-xs text-good">
+              Saved to your profile and plan
             </li>
           );
         if (e.type === "notice")
@@ -126,13 +158,13 @@ function Cites({ ids, facts }: { ids: string[]; facts: Record<string, string> })
           onClick={() => setOpen(open === id ? null : id)}
           aria-expanded={open === id}
           title={facts[id]}
-          className="ml-1 rounded-md bg-accent-soft px-1.5 py-0.5 align-middle font-mono text-[10px] font-semibold text-accent-ink hover:bg-accent hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+          className="ml-1 rounded-md bg-accent-soft px-1.5 py-0.5 align-middle font-mono text-[10px] font-semibold text-accent-ink hover:bg-accent hover:text-on-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           {id}
         </button>
       ))}
       {open && facts[open] && (
-        <span className="mt-1 block rounded-lg border border-line bg-white/60 px-2 py-1 text-xs text-muted">
+        <span className="mt-1 block rounded-lg border border-line bg-raised px-2 py-1 text-xs text-muted">
           <b className="font-mono">{open}</b> {facts[open]}
         </span>
       )}
@@ -150,7 +182,7 @@ export function Answer({
   onAddPlan: (skill: string) => void;
 }) {
   const n: Narrative = final.narrative;
-  const dropped = final.grounding?.dropped.length ?? 0;
+  const outcome = final.grounding?.outcome;
   return (
     <div className="space-y-4">
       {n.headline && (
@@ -186,6 +218,13 @@ export function Answer({
                       {s.why}
                       <Cites ids={s.facts} facts={final.facts} />
                     </p>
+                    {s.steps && s.steps.length > 0 && (
+                      <ul className="mt-1.5 list-disc space-y-0.5 pl-4 text-xs">
+                        {s.steps.map((st, j) => (
+                          <li key={j}>{st}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                   <Button
                     size="sm"
@@ -207,8 +246,10 @@ export function Answer({
         <ShieldCheck size={14} className="mt-px shrink-0 text-good" aria-hidden />
         <span>
           {final.source === "llm"
-            ? `Written by Gemini, then checked: every sentence must cite a fact, and every number and skill must appear in what it cites.${dropped ? ` ${dropped} unsupported part${dropped === 1 ? " was" : "s were"} removed.` : ""}`
-            : "Rule-based summary built directly from the facts (no AI writing)."}{" "}
+            ? `Written by Gemini and checked: every sentence cites facts, and every number and skill appears in what it cites${outcome === "after_retry" ? " (passed after one correction)" : ""}.`
+            : outcome === "fallback"
+              ? "Gemini's answer failed the grounding check twice, so this is a rule-based summary built from the facts."
+              : "Rule-based summary built directly from the facts (no AI writing)."}{" "}
           {final.disclaimer}
         </span>
       </p>
@@ -228,7 +269,7 @@ export function AssistantCard({
   events: AgentEvent[];
   running: boolean;
   error: string | null;
-  lastAnswer: Pick<Final, "narrative" | "facts" | "source"> | null;
+  lastAnswer: (Pick<Final, "narrative" | "facts" | "source"> & Partial<Pick<Final, "grounding">>) | null;
   plannedSkills: string[];
   onAsk: (message: string) => void;
   onAddPlan: (skill: string) => void;
@@ -238,7 +279,7 @@ export function AssistantCard({
   return (
     <Card className="p-5">
       <div className="flex items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-navy text-coral">
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-navy text-coral dark:bg-coral dark:text-navy">
           <Bot size={20} aria-hidden />
         </span>
         <div>
@@ -291,12 +332,12 @@ export function AssistantCard({
       </form>
 
       {error && (
-        <p role="alert" className="mt-4 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+        <p role="alert" className="mt-4 rounded-xl border border-bad/40 bg-bad-soft px-3 py-2 text-sm text-bad-ink">
           {error}
         </p>
       )}
       {events.length > 0 && (
-        <div className={cx("mt-5 rounded-xl border border-line bg-white/40 p-3")}>
+        <div className={cx("mt-5 rounded-xl border border-line bg-raised p-3")}>
           <Trace events={events} running={running} />
         </div>
       )}

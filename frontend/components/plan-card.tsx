@@ -37,7 +37,7 @@ export function PlanCard({
       ) : (
         <ul className="mt-3 space-y-2">
           {plan.map((p) => (
-            <li key={p.id} className="rounded-xl border border-line bg-white/45 p-2.5">
+            <li key={p.id} className="rounded-xl border border-line bg-raised p-2.5">
               <div className="flex items-center justify-between gap-2">
                 <span className={cx("text-sm font-medium", p.status === "done" && "text-muted line-through")}>{p.skill}</span>
                 <button
@@ -58,7 +58,7 @@ export function PlanCard({
                     onClick={() => p.status !== s && onStatus(p.id, s)}
                     className={cx(
                       "rounded-md py-1 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink",
-                      p.status === s ? (s === "done" ? "bg-good text-white" : "bg-white/85 font-medium text-ink shadow-sm") : "text-muted hover:text-ink",
+                      p.status === s ? (s === "done" ? "bg-good-soft font-medium text-good-ink shadow-sm" : "bg-raised-strong font-medium text-ink shadow-sm") : "text-muted hover:text-ink",
                     )}
                   >
                     {label}
@@ -87,7 +87,7 @@ export function PlanCard({
             <div className="flex gap-2">
               <button
                 type="button"
-                className="rounded-xl bg-bad px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-50"
+                className="rounded-xl border border-bad/40 bg-bad-soft px-3 py-1.5 text-sm font-medium text-bad-ink hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-50"
                 disabled={busy}
                 onClick={async () => {
                   setBusy(true);

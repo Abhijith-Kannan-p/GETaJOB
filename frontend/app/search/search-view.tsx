@@ -115,7 +115,7 @@ export default function SearchView() {
                 setQ(ex);
                 run(ex);
               }}
-              className="rounded-full bg-accent-soft px-3 py-1 text-sm text-accent-ink hover:bg-accent hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+              className="rounded-full bg-accent-soft px-3 py-1 text-sm text-accent-ink hover:bg-accent hover:text-on-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
             >
               {ex}
             </button>

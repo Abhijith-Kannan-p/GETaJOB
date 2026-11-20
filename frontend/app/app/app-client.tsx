@@ -6,6 +6,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BarChart3,
+  Bot,
+  Briefcase,
+  UserRound,
   Brain,
   Building2,
   Cloud,
@@ -82,6 +85,12 @@ function saveProfile(p: ProfileIn) {
   }
 }
 const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
+type Tab = "profile" | "jobs" | "assistant";
+const TABS: [Tab, string, LucideIcon][] = [
+  ["profile", "Profile", UserRound],
+  ["jobs", "Jobs", Briefcase],
+  ["assistant", "Assistant", Bot],
+];
 const toggleIn = <T,>(xs: T[], x: T) => (xs.includes(x) ? xs.filter((y) => y !== x) : [...xs, x]);
 
 export default function AppClient() {
@@ -105,6 +114,7 @@ export default function AppClient() {
   const [agentError, setAgentError] = useState<string | null>(null);
   const [planNote, setPlanNote] = useState<string | null>(null);
   const assistantRef = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<Tab>("profile");
   useEffect(() => {
     meApi
       .load()
@@ -120,12 +130,19 @@ export default function AppClient() {
   const ask = useCallback(
     async (message: string, jobId: number | null = null) => {
       setGap((g) => ({ ...g, open: false }));
+      setTab("assistant");
       assistantRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       setEvents([]);
       setAgentError(null);
       setRunning(true);
       try {
-        await runAgent(profile, { message, job_id: jobId }, (ev) => setEvents((prev) => [...prev, ev]));
+        await runAgent(profile, { message, job_id: jobId }, (ev) => {
+          setEvents((prev) => [...prev, ev]);
+          if (ev.type === "memory") {
+            setPlan(ev.plan);
+            setProfile((p) => ({ ...p, skills: ev.profile.skills }));
+          }
+        });
         setHasSession(true);
       } catch (e) {
         setAgentError(errMsg(e));
@@ -189,6 +206,7 @@ export default function AppClient() {
     ctrl.current = c;
     setLoading(true);
     setError(null);
+    setTab("jobs");
     try {
       setData(await rankApi.rank(profile, c.signal));
     } catch (e) {
@@ -211,10 +229,29 @@ export default function AppClient() {
   );
   const closeGap = useCallback(() => setGap((g) => ({ ...g, open: false })), []);
   const ready = profile.skills.length > 0 || profile.target_roles.length > 0;
+  const onMobile = (t: Tab) => tab !== t && "hidden lg:block"; // below lg only the active tab shows
 
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 lg:grid-cols-[360px_1fr]">
-      <aside className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+    <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[360px_1fr] lg:py-8">
+      <nav aria-label="Sections" className="glass sticky top-16 z-20 grid grid-cols-3 gap-1 rounded-xl p-1 lg:hidden">
+        {TABS.map(([id, label, Icon]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={tab === id}
+            onClick={() => setTab(id)}
+            className={cx(
+              "flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink",
+              tab === id ? "bg-accent font-medium text-on-accent shadow-sm" : "text-muted hover:text-ink",
+            )}
+          >
+            <Icon size={15} aria-hidden /> {label}
+            {id === "jobs" && data && <span className="font-mono text-xs">{data.results.length}</span>}
+          </button>
+        ))}
+      </nav>
+
+      <aside className={cx("lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto", onMobile("profile"))}>
         <Card className="p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -254,18 +291,11 @@ export default function AppClient() {
       </aside>
 
       <section className="min-w-0" aria-live="polite">
-        <div className="space-y-3">
-          {data?.degraded === "fulltext_only" && (
-            <Banner tone="warn">Semantic matching is unavailable right now, so candidates come from full-text search only.</Banner>
-          )}
-          {data && data.profile.unknown_skills.length > 0 && (
-            <Banner tone="info">Not in the skill list, so not used for matching: {data.profile.unknown_skills.join(", ")}</Banner>
-          )}
-          {error && <Banner tone="bad">{error}</Banner>}
-        </div>
-
+        {!ready && tab === "assistant" && (
+          <Card className="p-6 text-center text-sm text-muted lg:hidden">Pick a role or a few skills first, then ask.</Card>
+        )}
         {ready && (
-          <div ref={assistantRef} className="mb-6 scroll-mt-20">
+          <div ref={assistantRef} className={cx("mb-6 scroll-mt-32 lg:scroll-mt-20", onMobile("assistant"))}>
             <AssistantCard
               events={events}
               running={running}
@@ -277,6 +307,17 @@ export default function AppClient() {
             />
           </div>
         )}
+
+        <div className={cx(onMobile("jobs"))}>
+        <div className="space-y-3">
+          {data?.degraded === "fulltext_only" && (
+            <Banner tone="warn">Semantic matching is unavailable right now, so candidates come from full-text search only.</Banner>
+          )}
+          {data && data.profile.unknown_skills.length > 0 && (
+            <Banner tone="info">Not in the skill list, so not used for matching: {data.profile.unknown_skills.join(", ")}</Banner>
+          )}
+          {error && <Banner tone="bad">{error}</Banner>}
+        </div>
 
         {!data && !loading && !error && (
           <Card className="grid place-items-center gap-3 border-dashed p-12 text-center">
@@ -309,6 +350,7 @@ export default function AppClient() {
             </ul>
           </>
         )}
+        </div>
       </section>
 
       {gap.open && (
@@ -359,7 +401,7 @@ function RankedCard({ job, onWhyNot }: { job: RankedJob; onWhyNot: () => void })
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {job.matched_skills.slice(0, 6).map((s) => (
-                <span key={s} className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800">✓ {s}</span>
+                <span key={s} className="rounded-md bg-good-soft px-2 py-0.5 text-xs text-good-ink">✓ {s}</span>
               ))}
               {job.missing_required.slice(0, 4).map((s) => (
                 <span key={s} className="rounded-md bg-surface-2 px-2 py-0.5 text-xs text-muted">{s}</span>
@@ -437,7 +479,7 @@ function AddChip({ placeholder, onAdd, suggest, exclude }: {
               key={o}
               type="button"
               onClick={() => add(o)}
-              className="rounded-full bg-accent-soft px-2.5 py-1 text-xs text-accent-ink hover:bg-accent hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+              className="rounded-full bg-accent-soft px-2.5 py-1 text-xs text-accent-ink hover:bg-accent hover:text-on-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink"
             >
               + {o}
             </button>
@@ -494,7 +536,7 @@ function ProfileForm({ profile, onChange }: { profile: ProfileIn; onChange: (p: 
                 onClick={() => set("target_roles", toggleIn(profile.target_roles, role))}
                 className={cx(
                   "flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-xs font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-40",
-                  on ? "border-accent bg-accent text-ink shadow-sm" : "glass hover:border-accent hover:text-accent-ink",
+                  on ? "border-accent bg-accent text-on-accent shadow-sm" : "glass hover:border-accent hover:text-accent-ink",
                 )}
               >
                 <Icon size={18} aria-hidden />
@@ -554,7 +596,7 @@ function ProfileForm({ profile, onChange }: { profile: ProfileIn; onChange: (p: 
                 onClick={() => set("seniority", toggleIn(profile.seniority, l))}
                 className={cx(
                   "rounded-lg py-1.5 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink",
-                  on ? "bg-white/80 font-medium text-accent-ink shadow-sm" : "text-muted hover:text-ink",
+                  on ? "bg-accent font-medium text-on-accent shadow-sm" : "text-muted hover:text-ink",
                 )}
               >
                 {name}

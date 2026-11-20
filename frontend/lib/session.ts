@@ -52,9 +52,19 @@ export type Claim = { text: string; facts: string[] };
 export type Narrative = {
   headline: Claim | null;
   points: Claim[];
-  next_steps: { skill: string; why: string; facts: string[] }[];
+  next_steps: { skill: string; why: string; facts: string[]; steps?: string[] }[];
 };
-export type StoredAnswer = { narrative: Narrative; facts: Record<string, string>; source: "llm" | "template" };
+export type Grounding = {
+  kept: number;
+  dropped: { text: string; reason: string }[];
+  outcome: "first_try" | "after_retry" | "fallback" | "rules_only";
+};
+export type StoredAnswer = {
+  narrative: Narrative;
+  facts: Record<string, string>;
+  source: "llm" | "template";
+  grounding?: Grounding;
+};
 export type Me = {
   profile: ProfileIn | null;
   plan: PlanItem[];
@@ -63,7 +73,9 @@ export type Me = {
 
 export type AgentEvent =
   | { type: "start"; mode: "llm" | "offline"; max_llm_calls: number }
-  | { type: "thinking"; round: number | "narrative" }
+  | { type: "thinking"; round: number | "narrative" | "narrative retry" }
+  | { type: "check"; attempt: number; passed: boolean; violations: { text: string; reason: string }[] }
+  | { type: "memory"; plan: PlanItem[]; profile: ProfileIn }
   | { type: "tool_call"; name: string; args: Record<string, unknown>; by: "model" | "rules" }
   | { type: "tool_result"; name: string; facts?: { id: string; text: string }[]; error?: string }
   | { type: "notice"; message: string }
@@ -72,7 +84,7 @@ export type AgentEvent =
       source: "llm" | "template";
       narrative: Narrative;
       facts: Record<string, string>;
-      grounding: { kept: number; dropped: { text: string; reason: string }[] };
+      grounding: Grounding;
       degraded: string | null;
       disclaimer: string;
     }

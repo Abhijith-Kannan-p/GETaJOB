@@ -79,37 +79,69 @@ def test_offline_run_for_one_job_explains_it(client, db):  # noqa: F811
     assert nar["grounding"]["dropped"] == []
 
 
-def _narrative_from_prompt(prompt: str) -> dict:
-    fid = next(ln.split(":")[0] for ln in prompt.splitlines() if " ranks #1 of " in ln)
-    return {
-        "headline": "Your top match is the first job in the list.",
-        "headline_facts": [fid],
-        "points": [
-            {"text": "You are #999 for every job.", "facts": [fid]},  # invented number
-            {"text": "This is grounded in nothing.", "facts": ["F99"]},  # unknown fact
-        ],
-        "next_steps": [{"skill": "Underwater Basket Weaving", "why": "Fun.", "facts": [fid]}],
-    }
+def _top_fact(prompt: str) -> str:
+    return next(ln.split(":")[0] for ln in prompt.splitlines() if " ranks #1 of " in ln)
 
 
-def test_llm_run_calls_tools_and_drops_ungrounded_claims(client, db):  # noqa: F811
+BAD = {
+    "points": [
+        {"text": "You are #999 for every job.", "facts": ["F2"]},  # invented number
+        {"text": "This is grounded in nothing.", "facts": ["F99"]},  # unknown fact
+    ],
+    "next_steps": [{"skill": "Underwater Basket Weaving", "why": "Fun.", "facts": ["F2"]}],
+}
+
+
+def _bad_then_good(prompt: str) -> dict:
+    fid = _top_fact(prompt)
+    head = {"headline": "Your top match is the first job in the list.", "headline_facts": [fid]}
+    if "failed the grounding check" not in prompt:
+        return {**head, **BAD}
+    return {**head, "points": [], "next_steps": []}
+
+
+def test_llm_run_retries_once_with_the_violations_listed(client, db):  # noqa: F811
     fake = FakeLLM(
         [Reply("", [ToolCall("rank_jobs", {"limit": 3}), ToolCall("best_skills", {})]), Reply("Enough facts.")],
-        narrative=_narrative_from_prompt,
+        narrative=_bad_then_good,
     )
     evs = run(AgentContext(db, None, PROF), fake)
     calls = [(e["name"], e["by"]) for e in evs if e["type"] == "tool_call"]
     assert calls == [("rank_jobs", "model"), ("best_skills", "model")]
-    nar = next(e for e in evs if e["type"] == "narrative")
-    assert nar["source"] == "llm"
-    assert nar["narrative"]["headline"]["text"] == "Your top match is the first job in the list."
-    assert nar["narrative"]["points"] == [] and nar["narrative"]["next_steps"] == []
-    assert sorted(d["reason"] for d in nar["grounding"]["dropped"]) == [
+    checks = [e for e in evs if e["type"] == "check"]
+    assert [c["passed"] for c in checks] == [False, True]
+    assert sorted(v["reason"] for v in checks[0]["violations"]) == [
         "cites unknown fact F99",
         "not a known skill",
         "number 999 not in cited facts",
     ]
-    assert fake.calls == 3  # 2 tool turns + 1 narrative
+    assert "number 999 not in cited facts" in fake.prompts[-1]  # the retry prompt lists the violations
+    nar = next(e for e in evs if e["type"] == "narrative")
+    assert nar["source"] == "llm" and nar["grounding"]["outcome"] == "after_retry"
+    assert nar["narrative"]["headline"]["text"] == "Your top match is the first job in the list."
+    assert fake.calls == 4  # 2 tool turns + narrative + retry
+
+
+def test_llm_run_that_fails_twice_falls_back_to_the_template(client, db):  # noqa: F811
+    fake = FakeLLM([Reply("ok")], narrative=lambda p: {"headline": "Top!", "headline_facts": [_top_fact(p)], **BAD})
+    evs = run(AgentContext(db, None, PROF), fake)
+    assert [c["passed"] for c in evs if c["type"] == "check"] == [False, False]
+    nar = next(e for e in evs if e["type"] == "narrative")
+    assert nar["source"] == "template" and nar["grounding"]["outcome"] == "fallback"
+    assert any(e["type"] == "notice" and "grounding" in e["message"] for e in evs)
+
+
+def test_llm_run_that_passes_first_time(client, db):  # noqa: F811
+    def good(p):
+        return {
+            "headline": "Here is your top match.",
+            "headline_facts": [_top_fact(p)],
+            "points": [],
+            "next_steps": [],
+        }  # noqa: E731
+    fake = FakeLLM([Reply("", [ToolCall("rank_jobs", {})]), Reply("ok")], narrative=good)
+    nar = next(e for e in run(AgentContext(db, None, PROF), fake) if e["type"] == "narrative")
+    assert nar["grounding"]["outcome"] == "first_try" and fake.calls == 3
 
 
 def test_llm_calls_are_bounded_even_if_the_model_never_stops(client, db):  # noqa: F811
@@ -131,6 +163,44 @@ def test_quota_error_mid_run_is_not_retried_and_falls_back(client, db):  # noqa:
     assert any(e["type"] == "notice" and "quota" in e["message"] for e in evs)
     nar = next(e for e in evs if e["type"] == "narrative")
     assert nar["source"] == "template" and nar["narrative"]["headline"] is not None
+
+
+def test_write_tools_update_session_memory(client, db):  # noqa: F811
+    h = new_session(client)
+    sid = db.execute("SELECT session_id FROM profiles").fetchone()["session_id"]
+    fake = FakeLLM(
+        [
+            Reply(
+                "",
+                [
+                    ToolCall("update_profile", {"add_skills": ["docker", "nonsense-skill"]}),
+                    ToolCall("update_plan", {"skill": "kubernetes", "status": "learning"}),
+                ],
+            ),
+            Reply("", [ToolCall("update_plan", {"skill": "Kubernetes", "status": "done"})]),
+        ],
+        narrative=None,
+    )
+    evs = run(AgentContext(db, None, PROF, sid=sid), fake)
+    mem = [e for e in evs if e["type"] == "memory"]
+    assert len(mem) == 3
+    assert {"Docker", "Kubernetes"} <= set(mem[-1]["profile"]["skills"])
+    assert [(p["skill"], p["status"], p["source"]) for p in mem[-1]["plan"]] == [("Kubernetes", "done", "agent")]
+    me = client.get("/api/me", headers=h).json()
+    assert {"Docker", "Kubernetes"} <= set(me["profile"]["skills"])
+    # tool results sent back to the model never include the UI-only memory payload
+    assert all("_memory" not in str(r) for r in fake.prompts)
+
+
+def test_write_tools_need_a_session_and_get_job_reports_skills(client, db):  # noqa: F811
+    job = client.post("/api/rank", json={"profile": PROFILE}).json()["results"][0]
+    fake = FakeLLM(
+        [Reply("", [ToolCall("update_plan", {"skill": "Docker"}), ToolCall("get_job", {"job_id": job["id"]})])]
+    )
+    evs = run(AgentContext(db, None, PROF), fake)
+    res = [e for e in evs if e["type"] == "tool_result"]
+    assert res[0]["error"] == "no session to save a plan in"
+    assert f"Job {job['id']}" in res[1]["facts"][0]["text"] and "Required skills:" in res[1]["facts"][0]["text"]
 
 
 def test_bad_tool_arguments_do_not_crash_the_run(client, db):  # noqa: F811
@@ -221,6 +291,41 @@ def test_agent_endpoint_guards(client, monkeypatch):  # noqa: F811
     monkeypatch.setattr(get_settings(), "session_max_runs", 1)
     assert client.post("/api/agent/run", json={}, headers=h).status_code == 200
     assert client.post("/api/agent/run", json={}, headers=h).status_code == 429
+
+
+def test_stream_sends_heartbeats_and_stops_at_the_timeout(client, monkeypatch):  # noqa: F811
+    import time as _time
+
+    from app.api import agent as agent_api
+    from app.main import app
+
+    class Slow(FakeLLM):
+        def chat(self, system, tools):
+            inner = super().chat(system, tools)
+
+            class _C:
+                def send(self, text=None, results=None):
+                    _time.sleep(0.6)
+                    return inner.send(text, results)
+
+            return _C()
+
+    monkeypatch.setattr(agent_api, "HEARTBEAT_S", 0.1)
+    monkeypatch.setattr(agent_api, "RUN_TIMEOUT_S", 0.35)
+    monkeypatch.setattr(app.state, "llm_factory", lambda c: Slow([Reply("ok")]), raising=False)
+    h = new_session(client)
+    text = client.post("/api/agent/run", json={}, headers=h).text
+    assert ": keep-alive" in text
+    evs = sse(text)
+    assert evs[-1]["type"] == "error" and "too long" in evs[-1]["message"]
+    _time.sleep(1.0)  # let the abandoned worker finish and free its slot/connection
+
+
+def test_grounding_outcomes_are_counted_anonymously(client, db, monkeypatch):  # noqa: F811
+    h = new_session(client)
+    client.post("/api/agent/run", json={}, headers=h)
+    row = db.execute("SELECT name, count FROM events WHERE name LIKE 'grounding_%'").fetchall()
+    assert [(r["name"], r["count"]) for r in row] == [("grounding_rules_only", 1)]
 
 
 def test_global_daily_cap_switches_to_offline_without_llm_calls(client, monkeypatch):  # noqa: F811

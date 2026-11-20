@@ -1,7 +1,7 @@
 import type { Breakdown, Term } from "@/lib/api";
 
 export const TERM_META: Record<Term, { label: string; className: string }> = {
-  semantic: { label: "Semantic", className: "bg-navy" },
+  semantic: { label: "Semantic", className: "bg-navy dark:bg-cream" },
   keyword: { label: "Keyword", className: "bg-steel" },
   skills: { label: "Skills", className: "bg-coral" },
   seniority: { label: "Seniority", className: "bg-amber-400" },

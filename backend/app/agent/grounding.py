@@ -44,6 +44,12 @@ NARRATIVE_SCHEMA: dict = {
                 "properties": {
                     "skill": {"type": "string"},
                     "why": {"type": "string"},
+                    "steps": {
+                        "type": "array",
+                        "maxItems": 3,
+                        "items": {"type": "string"},
+                        "description": "Concrete practice steps; no links, no numbers unless from the facts.",
+                    },
                     "facts": {"type": "array", "items": {"type": "string"}},
                 },
                 "required": ["skill", "why", "facts"],
@@ -76,6 +82,7 @@ class Step:
     skill: str
     why: str
     facts: list[str]
+    steps: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -135,8 +142,17 @@ def _ids(v) -> list[str]:
     return [str(x).strip() for x in v][:6] if isinstance(v, list) else []
 
 
-def ground(raw: Mapping, facts: Mapping[str, str], find_skills: SkillFinder, canonical: Canonical) -> GroundingReport:
-    """Validate a model narrative (already JSON-decoded) against the fact table."""
+def ground(
+    raw: Mapping,
+    facts: Mapping[str, str],
+    find_skills: SkillFinder,
+    canonical: Canonical,
+    always: tuple[str, ...] = (),
+) -> GroundingReport:
+    """Validate a model narrative (already JSON-decoded) against the fact table.
+
+    `always`: fact ids every practice step may draw on implicitly (the profile fact), besides its own skill.
+    """
     dropped: list[dict] = []
 
     def keep(text, cited) -> bool:
@@ -173,7 +189,16 @@ def ground(raw: Mapping, facts: Mapping[str, str], find_skills: SkillFinder, can
             continue
         if keep(s.get("why"), ids):
             seen.add(skill)
-            steps.append(Step(skill, s["why"].strip(), ids))
+            ctx_facts = {**facts, "_skill": skill}
+            cited = [*ids, *[a for a in always if a in facts], "_skill"]
+            practice = []
+            for line in (s.get("steps") or [])[:3] if isinstance(s.get("steps"), list) else []:
+                reason = check_claim(line, cited, ctx_facts, find_skills)
+                if reason:
+                    dropped.append({"text": str(line)[:200], "reason": f"step: {reason}"})
+                else:
+                    practice.append(line.strip())
+            steps.append(Step(skill, s["why"].strip(), ids, practice))
 
     if headline is None and points:  # promote the first grounded point rather than show no headline
         headline = points.pop(0)

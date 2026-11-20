@@ -58,12 +58,28 @@ Postgres + pgvector: HNSW (cosine) + GIN full-text; one SQL query fuses both wit
 |---|---|
 | `/` | Landing: the name fades in once (2 s, skipped under reduced motion); Enter button, or press the Enter key; scroll down for **live** tiles (open-role count, three real searches, a live Why-Not-Me result for a sample profile, roles by level, companies, score weights). No mock data. |
 | `/search` | Hybrid search with level/remote filters; `?q=` links run immediately |
-| `/app` | Profile built from buttons (role presets, popular-skill toggles, level pills, location presets, remote switch) → ranked jobs with score bars → "Why not me?" panel; the assistant (preset question buttons, live trace, cited answer, "add to plan"); learning plan; Forget me |
+| `/app` | Profile built from buttons (role presets, popular-skill toggles, level pills, location presets, remote switch) → ranked jobs with score bars → "Why not me?" panel; the assistant (preset question buttons, live trace, cited answer, "add to plan"); learning plan; Forget me. On phones: Profile / Jobs / Assistant tabs |
+| `/dev/components` | Living style guide: every token and shared primitive in both themes (not indexed) |
 
-Navy (#14213D) / cream (#F4EDE0) / coral (#FF6B5B) theme with frosted-glass surfaces, all from design tokens
-in `frontend/app/globals.css`. Coral is used for fills with navy text on top; small coral text uses a darker
-coral-ink token so it keeps ≥ 4.5:1 contrast. Icons from lucide-react. Lighthouse 13.6 (mobile) on the local
-production build: performance **96** (`/`), 96 (`/app`), 97 (`/search`); accessibility **100** on all three.
+Navy (#14213D) / cream (#F4EDE0) / coral (#FF6B5B) with frosted-glass surfaces:
+- **Two themes:** cream (light) and navy (dark), with a toggle in the header.
+  - It follows the OS until you pick one, and `next-themes` applies it before paint, so there is no flash.
+  - Every colour is a semantic token in `frontend/app/globals.css`, redefined for dark mode.
+- **Contrast:**
+  - Coral is a fill with navy text on top (`on-accent`, 5.7:1).
+  - Small coral text uses a `coral-ink` token that keeps ≥ 4.5:1 in both themes.
+- **Motion:** only short transitions, plus the one 2 s title fade by request. All of it is off under reduced
+  motion.
+- **Components:** shared primitives are hand-written and dependency-free (`components/ui.tsx`), with icons from
+  lucide-react.
+- **Lighthouse 13.6** (mobile emulation, local production build), measured in both themes:
+
+| Page | Performance | Accessibility |
+|---|---|---|
+| `/` | 97 | 100 |
+| `/app` | 95 | 100 |
+| `/search` | 97 | 100 |
+| `/dev/components` | 100 | 100 |
 
 ## Ranking and Why-Not-Me
 
@@ -112,24 +128,33 @@ keyword terms. Only the skill-overlap term changes, because nothing else in the 
 [run.py](backend/app/agent/run.py) · [tools.py](backend/app/agent/tools.py) · [grounding.py](backend/app/agent/grounding.py)
 
 ```
-question ─> Gemini (function calling, ≤ 3 rounds) ─> read-only tools over the REAL ranker
-              rank_jobs · best_skills · explain_job · simulate_skill · search_jobs
+question ─> Gemini (function calling, ≤ 2 rounds) ─> tools over the REAL ranker
+              read:  rank_jobs · best_skills · explain_job · simulate_skill · search_jobs · get_job
+              write: update_plan · update_profile   (only on explicit request; taxonomy skills only)
                  │ every result becomes numbered facts: "F4: Job 17 … ranks #4 of 200 …"
                  ▼
-            Gemini structured output (JSON schema): headline / points / next steps, each citing fact ids
+            Gemini structured output (JSON schema): headline / points / next steps {skill, why, steps}
                  ▼
-            grounding check ─> drop unsupported sentences ─> stream to the browser (SSE)
+            grounding check ── pass ──> stream to the browser (SSE)
+                 │ fail
+                 ▼
+            one retry with the violations listed ── pass ──> stream
+                 │ fail
+                 ▼
+            rule-based narrative from the same facts (passes the same check)
 ```
 
-- **Bounded:** at most 4 LLM calls per run (3 tool rounds + 1 narrative), and at most 3 tool calls per round.
-  These are hard limits in code, and a test checks them with a model that never stops calling tools.
+- **Bounded:** at most 4 LLM calls per run (2 tool rounds + 1 narrative + 1 retry), and at most 3 tool calls
+  per round. These are hard limits in code, and a test checks them with a model that never stops calling tools.
+  Each run has a 90 s limit, with SSE keep-alive comments every 10 s.
 - **Grounding check** (pure, property-tested). A sentence is kept only if:
   - it cites facts that exist;
   - every number in it appears in the facts it cites;
   - every skill it names appears in the facts it cites;
   - it has no links.
-  Failing sentences are dropped, never rewritten. If nothing survives, a rule-based narrative built from the
-  same facts is shown instead, and it must pass the same check.
+  Practice steps may also use the profile and their own skill, but nothing else. Any violation triggers one
+  retry; a second failure shows the rule-based narrative. Each run's outcome (`first_try`, `after_retry`,
+  `fallback`, `rules_only`) is counted anonymously per day in `events`.
 - **The model never sees job descriptions,** only the facts the tools produce. The user's question is
   framed as data, not instructions.
 - **Degrades instead of failing:**

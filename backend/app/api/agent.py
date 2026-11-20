@@ -12,6 +12,7 @@ from __future__ import annotations
 import itertools
 import json
 import logging
+import queue
 import re
 import threading
 import time
@@ -34,6 +35,8 @@ router = APIRouter(prefix="/api")
 log = logging.getLogger("getajob.api.agent")
 
 MAX_CONCURRENT_RUNS = 2
+RUN_TIMEOUT_S = 90
+HEARTBEAT_S = 10
 RUN_SLOT_TTL_S = 180  # a slot whose stream never started (client left early) frees itself after this
 
 
@@ -68,6 +71,15 @@ _TODAY = "(created_at AT TIME ZONE 'America/Los_Angeles')::date = " + quota.QUOT
 class AgentIn(BaseModel):
     message: str = Field("", max_length=300)
     job_id: int | None = None
+
+
+def count_event(c, name: str) -> None:
+    """Anonymous daily counters (no session id): e.g. how often answers pass grounding on the first try."""
+    c.execute(
+        "INSERT INTO events (day, name, count) VALUES (" + quota.QUOTA_DAY + ", %s, 1) "
+        "ON CONFLICT (day, name) DO UPDATE SET count = events.count + 1",
+        (name,),
+    )
 
 
 def looks_personal(text: str) -> bool:
@@ -136,40 +148,53 @@ def agent_run(body: AgentIn, request: Request, sid: str = Depends(session_key)):
     profile = ProfileIn(**prof)
     factory, embedder = request.app.state.llm_factory, request.app.state.embedder
 
-    def stream():
+    def work(out: queue.Queue) -> None:
+        """Runs in its own thread so the response can send heartbeats and give up at RUN_TIMEOUT_S."""
         try:
-            if cap_notice:
-                yield _sse({"type": "notice", "message": cap_notice})
             with db_conn() as c:
                 llm = factory(c) if use_llm else None
-                ctx = AgentContext(c, embedder, profile)
+                ctx = AgentContext(c, embedder, profile, sid=sid)
                 trace, final = [], None
                 for ev in run_agent(ctx, message, llm, history, body.job_id):
                     if ev["type"] == "tool_call":
                         trace.append({"name": ev["name"], "args": ev["args"], "by": ev["by"]})
                     elif ev["type"] == "narrative":
                         final = ev
-                    yield _sse(ev)
+                    out.put(ev)
                 if final is not None:
+                    content = {k: final[k] for k in ("narrative", "facts", "source", "grounding")}
                     c.execute(
                         "INSERT INTO messages (session_id, role, content) VALUES (%s, 'assistant', %s)",
-                        (
-                            sid,
-                            Jsonb(
-                                {
-                                    "narrative": final["narrative"],
-                                    "facts": final["facts"],
-                                    "source": final["source"],
-                                    "trace": trace,
-                                }
-                            ),
-                        ),
+                        (sid, Jsonb({**content, "trace": trace})),
                     )
+                    count_event(c, f"grounding_{final['grounding']['outcome']}")
         except Exception:  # noqa: BLE001 - the stream has started; report in-band, details stay in logs
             log.exception("agent run failed")
-            yield _sse({"type": "error", "message": "Something went wrong during this run. Please try again."})
+            out.put({"type": "error", "message": "Something went wrong during this run. Please try again."})
         finally:
             _slots.release(slot)
+            out.put(None)
+
+    def stream():
+        if cap_notice:
+            yield _sse({"type": "notice", "message": cap_notice})
+        out: queue.Queue = queue.Queue()
+        threading.Thread(target=work, args=(out,), daemon=True, name="agent-run").start()
+        deadline = time.monotonic() + RUN_TIMEOUT_S
+        while True:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                log.warning("agent run timed out", extra={"timeout_s": RUN_TIMEOUT_S})
+                yield _sse({"type": "error", "message": "This run took too long and was stopped. Please try again."})
+                return
+            try:
+                ev = out.get(timeout=min(HEARTBEAT_S, left))
+            except queue.Empty:
+                yield ": keep-alive\n\n"  # SSE comment: keeps proxies from closing an idle stream
+                continue
+            if ev is None:
+                return
+            yield _sse(ev)
 
     return StreamingResponse(
         stream(),

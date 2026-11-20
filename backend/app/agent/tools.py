@@ -61,6 +61,7 @@ class AgentContext:
     conn: object
     embedder: Embedder | None
     profile: ProfileIn
+    sid: str | None = None  # hashed session id; write tools need it
     book: FactBook = field(default_factory=FactBook)
     data: dict = field(default_factory=dict)  # structured copies for the rule-based narrative
     degraded: str | None = None
@@ -230,7 +231,92 @@ def search_jobs(ctx: AgentContext, query: str, remote_only: bool = False) -> dic
     return ctx.book.out(ids)
 
 
+def get_job(ctx: AgentContext, job_id: int) -> dict:
+    r = ctx.conn.execute(
+        """SELECT id, title, company, location, is_remote, seniority, required_skills, preferred_skills,
+                  posted_at, closed_at FROM jobs WHERE id = %s""",
+        (int(job_id),),
+    ).fetchone()
+    if r is None:
+        return {"error": f"job {job_id} was not found"}
+    status = "closed" if r["closed_at"] else "open"
+    posted = r["posted_at"].date().isoformat() if r["posted_at"] else "date not listed"
+    fid = ctx.book.add(
+        f"{_cap(_job(r))} is {status}, level {r['seniority'].replace('_', ' ')}, posted {posted}. "
+        f"Required skills: {_list(r['required_skills'])}. Preferred skills: {_list(r['preferred_skills'])}."
+    )
+    return ctx.book.out([fid])
+
+
+# ---------------- write tools (session memory). Only for explicit user requests; see SYSTEM prompt. ----------
+MAX_PLAN_ITEMS = 20
+
+
+def _plan(ctx: AgentContext) -> list[dict]:
+    rows = ctx.conn.execute(
+        "SELECT id, skill, status, source, added_at FROM plan_items WHERE session_id = %s ORDER BY id", (ctx.sid,)
+    ).fetchall()
+    return [{**r, "added_at": r["added_at"].isoformat()} for r in rows]
+
+
+def _save_profile(ctx: AgentContext) -> None:
+    from psycopg.types.json import Jsonb
+
+    ctx.conn.execute(
+        "UPDATE profiles SET facts = jsonb_set(facts, '{profile}', %s), updated_at = now() WHERE session_id = %s",
+        (Jsonb(ctx.profile.model_dump()), ctx.sid),
+    )
+    ctx._sims.clear()  # the profile changed, so cached pools/simulators are stale
+
+
+def update_plan(ctx: AgentContext, skill: str, status: str = "todo") -> dict:
+    if ctx.sid is None:
+        return {"error": "no session to save a plan in"}
+    canon = load_taxonomy().canonical(str(skill or ""))
+    if canon is None:
+        return {"error": f"{skill!r} is not a skill this app knows"}
+    if status not in ("todo", "learning", "done"):
+        return {"error": "status must be todo, learning or done"}
+    n = ctx.conn.execute("SELECT count(*) AS n FROM plan_items WHERE session_id = %s", (ctx.sid,)).fetchone()["n"]
+    exists = ctx.conn.execute(
+        "SELECT 1 FROM plan_items WHERE session_id = %s AND skill = %s", (ctx.sid, canon)
+    ).fetchone()
+    if not exists and n >= MAX_PLAN_ITEMS:
+        return {"error": f"the plan already holds {MAX_PLAN_ITEMS} skills"}
+    ctx.conn.execute(
+        """INSERT INTO plan_items (session_id, skill, status, source) VALUES (%s, %s, %s, 'agent')
+           ON CONFLICT (session_id, skill) DO UPDATE SET status = EXCLUDED.status""",
+        (ctx.sid, canon, status),
+    )
+    text = f"{canon} is now in your learning plan with status {status}."
+    if status == "done" and canon not in ctx.profile.skills:
+        ctx.profile = ctx.profile.model_copy(update={"skills": [*ctx.profile.skills, canon][:50]})
+        _save_profile(ctx)
+        text += f" {canon} was also added to your profile skills."
+    return {**ctx.book.out([ctx.book.add(text)]), "_memory": {"plan": _plan(ctx), "profile": ctx.profile.model_dump()}}
+
+
+def update_profile(ctx: AgentContext, add_skills: list | None = None, remove_skills: list | None = None) -> dict:
+    if ctx.sid is None:
+        return {"error": "no session to save a profile in"}
+    tax = load_taxonomy()
+    add = [c for c in (tax.canonical(str(s)) for s in (add_skills or [])[:10]) if c]
+    remove = {c for c in (tax.canonical(str(s)) for s in (remove_skills or [])[:10]) if c}
+    if not add and not remove:
+        return {"error": "no known skills to add or remove"}
+    skills = [s for s in ctx.profile.skills if (tax.canonical(s) or s) not in remove]
+    skills += [s for s in add if s not in skills]
+    ctx.profile = ctx.profile.model_copy(update={"skills": skills[:50]})
+    _save_profile(ctx)
+    text = f"Profile updated at your request. Added: {_list(add)}. Removed: {_list(sorted(remove))}."
+    ids = [ctx.book.add(text), ctx.profile_fact()]
+    return {**ctx.book.out(ids), "_memory": {"plan": _plan(ctx), "profile": ctx.profile.model_dump()}}
+
+
 TOOLS = {
+    "get_job": get_job,
+    "update_plan": update_plan,
+    "update_profile": update_profile,
     "rank_jobs": rank_jobs,
     "best_skills": best_skills,
     "explain_job": explain_job,
@@ -239,6 +325,34 @@ TOOLS = {
 }
 
 TOOL_SPECS = [
+    ToolSpec(
+        "get_job",
+        "Details of one posting: title, company, location, level, required and preferred skills, open or closed.",
+        {"type": "object", "properties": {"job_id": {"type": "integer"}}, "required": ["job_id"]},
+    ),
+    ToolSpec(
+        "update_plan",
+        "Add a skill to the user's learning plan or change its status. ONLY when the user explicitly asks.",
+        {
+            "type": "object",
+            "properties": {
+                "skill": {"type": "string"},
+                "status": {"type": "string", "enum": ["todo", "learning", "done"]},
+            },
+            "required": ["skill"],
+        },
+    ),
+    ToolSpec(
+        "update_profile",
+        "Add or remove skills in the saved profile. ONLY when the user explicitly says they have or lack a skill.",
+        {
+            "type": "object",
+            "properties": {
+                "add_skills": {"type": "array", "items": {"type": "string"}},
+                "remove_skills": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+    ),
     ToolSpec(
         "rank_jobs",
         "Rank open jobs for the user's saved profile with the transparent ranker. Returns the top jobs as facts.",
@@ -281,6 +395,9 @@ def run_tool(ctx: AgentContext, name: str, args: dict) -> dict:
     if fn is None:
         return {"error": f"unknown tool {name}"}
     allowed = {
+        "get_job": {"job_id"},
+        "update_plan": {"skill", "status"},
+        "update_profile": {"add_skills", "remove_skills"},
         "rank_jobs": {"limit"},
         "best_skills": set(),
         "explain_job": {"job_id"},

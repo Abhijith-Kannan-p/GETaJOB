@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
+import { ThemeToggle } from "@/components/theme";
 
 // Full-screen intro: the name fades in once (2 s), then Enter appears. Pressing the Enter key anywhere on the
 // page (outside a form control or link) goes straight in.
@@ -24,6 +25,7 @@ export function Hero() {
 
   return (
     <section className="gj-glow relative flex min-h-[100svh] flex-col items-center justify-center px-4 text-center text-cream">
+      <ThemeToggle onDark className="absolute right-4 top-4" />
       <h1 className="gj-fade-in text-6xl font-semibold tracking-tight text-cream sm:text-8xl">
         GET<span className="text-coral">a</span>JOB
       </h1>

@@ -92,3 +92,30 @@ def test_any_number_absent_from_cited_facts_is_rejected(job, rank, extra):
         return
     reason = check_claim(f"Job {job} ranks #{extra}.", ["F1"], facts, find)
     assert reason == f"number {extra} not in cited facts"
+
+
+def test_practice_steps_may_use_their_skill_and_the_profile_but_nothing_invented():
+    raw = {
+        "headline": "Data Analyst Intern at Acme is #4 of 200.",
+        "headline_facts": ["F2"],
+        "points": [],
+        "next_steps": [
+            {
+                "skill": "Tableau",
+                "why": "It moves 12 of your jobs up.",
+                "facts": ["F3"],
+                "steps": [
+                    "Build a Tableau dashboard from a SQL query",  # Tableau = own skill, SQL = profile fact
+                    "Finish it in 2 weeks",  # invented number
+                    "Learn Kubernetes too",  # skill from nowhere
+                    "Watch https://example.com",  # 4th step: beyond the cap of 3, ignored
+                ],
+            }
+        ],
+    }
+    r = ground(raw, FACTS, find, TAX.canonical, always=("F1",))
+    assert r.narrative.next_steps[0].steps == ["Build a Tableau dashboard from a SQL query"]
+    assert sorted(d["reason"] for d in r.dropped) == [
+        "step: number 2 not in cited facts",
+        "step: skill Kubernetes not in cited facts",
+    ]
