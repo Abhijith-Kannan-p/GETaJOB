@@ -10,8 +10,9 @@ estimates)."* These are the ranker's own numbers, not a hiring prediction.
 > agent with session memory, UI, evals, and CI with a recorded-run fallback. Nothing below describes a
 > feature that does not exist. Known gaps are listed under [Limitations](#limitations).
 
-**Live:** API `https://getajob-api.onrender.com` (`/health`, `/api/stats`, `/api/eval`); the web app runs on
-Vercel. Both are on free tiers: the API sleeps when idle, so the first request can take up to a minute.
+**Live:** [frontend-eight-sigma-mj8ezgzzva.vercel.app](https://frontend-eight-sigma-mj8ezgzzva.vercel.app/)
+(try `/app`, `/search` and `/eval`). API: `https://getajob-api.onrender.com` (`/health`, `/api/stats`,
+`/api/eval`). Both are on free tiers: the API sleeps when idle, so the first request can take up to a minute.
 
 | Ranked jobs with a score breakdown | Why-Not-Me for one job |
 |---|---|
