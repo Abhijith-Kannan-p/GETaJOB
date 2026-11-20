@@ -63,19 +63,19 @@ class SimulateIn(BaseModel):
     job_id: int | None = None
 
 
-def _breakdown(terms: dict, w) -> dict:
+def breakdown_out(terms: dict, w) -> dict:
     return {
         t: {"value": round(terms[t], 4), "weight": w.of(t), "contribution": round(w.of(t) * terms[t], 4)} for t in TERMS
     }
 
 
-def _effect_out(e) -> dict:
+def effect_out(e) -> dict:
     d = asdict(e)
     d["job_rank"] = None if e.job_rank is None else {"before": e.job_rank[0], "after": e.job_rank[1]}
     return d
 
 
-def _plan_out(p) -> dict:
+def plan_out(p) -> dict:
     return {
         "steps": [
             {
@@ -83,7 +83,7 @@ def _plan_out(p) -> dict:
                 "skill": s.skill,
                 "effort_tier": s.effort_tier,
                 "effort_hours": s.effort_hours,
-                "effect": _effect_out(s.effect),
+                "effect": effect_out(s.effect),
             }
             for s in p.steps
         ],
@@ -128,7 +128,7 @@ def rank(body: RankIn, request: Request):
                 **job_out(pool.cards[jid]),
                 "rank": sim.base_rank[jid],
                 "score": round(sim.base_scores[jid], 4),
-                "breakdown": _breakdown(sim.terms[jid], w),
+                "breakdown": breakdown_out(sim.terms[jid], w),
                 "matched_skills": [s for s in (*j.required, *j.preferred) if s in np.profile.skills],
                 "missing_required": [s for s in j.required if s not in np.profile.skills],
             }
@@ -155,15 +155,15 @@ def why_not_me(body: WhyNotIn, request: Request):
                 "job": job_out(pool.cards[body.job_id]),
                 "rank": g["rank"],
                 "score": round(g["score"], 4),
-                "breakdown": _breakdown(g["terms"], w),
+                "breakdown": breakdown_out(g["terms"], w),
                 "matched": g["matched"],
                 "missing": [asdict(m) for m in g["missing"]],
-                "fixes": [_effect_out(e) for e in fixes[:3]],
+                "fixes": [effect_out(e) for e in fixes[:3]],
             }
         )
     else:
-        out["fixes"] = [_effect_out(e) for e in skill_effects(sim, effort)[:3]]
-    out["plan"] = _plan_out(greedy_plan(sim, effort, job_id=body.job_id))
+        out["fixes"] = [effect_out(e) for e in skill_effects(sim, effort)[:3]]
+    out["plan"] = plan_out(greedy_plan(sim, effort, job_id=body.job_id))
     return out
 
 
@@ -179,7 +179,7 @@ def simulate(body: SimulateIn, request: Request):
     e = skill_effects(sim, load_effort(), job_id=body.job_id, only=[skill])
     if not e:
         raise HTTPException(422, "that skill is not something this app suggests as a fix")
-    return {**_meta(np, pool), "disclaimer": DISCLAIMER, "effect": _effect_out(e[0])}
+    return {**_meta(np, pool), "disclaimer": DISCLAIMER, "effect": effect_out(e[0])}
 
 
 @router.get("/skills")

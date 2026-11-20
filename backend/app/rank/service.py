@@ -158,6 +158,12 @@ def build_pool(
     return pool
 
 
+def clear_pools() -> None:
+    """Drop cached pools (they hold profile text); used by forget-me."""
+    with _pools_lock:
+        _pools.clear()
+
+
 def clear_caches_for_tests() -> None:
     global _idf
     _idf = None

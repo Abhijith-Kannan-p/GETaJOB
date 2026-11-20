@@ -1,7 +1,8 @@
 "use client";
 
 // Matching UI: profile (buttons, not typing) -> ranked jobs with score breakdown -> "Why not me?" panel.
-// The profile lives in this browser only (localStorage) until server-side memory lands.
+// The profile lives in this browser (localStorage). Using the assistant or the plan also stores a copy on the
+// server under an anonymous session id; "Forget me" deletes both.
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BarChart3,
@@ -26,7 +27,10 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ApiError, rankApi, type Level, type ProfileIn, type RankResponse, type RankedJob, type WhyNotResponse } from "@/lib/api";
+import { meApi, runAgent, type AgentEvent, type PlanItem, type StoredAnswer } from "@/lib/session";
+import { AssistantCard } from "@/components/assistant";
 import { GapPanel } from "@/components/gap-panel";
+import { PlanCard } from "@/components/plan-card";
 import { ScoreBar, ScoreLegend } from "@/components/score-bar";
 import { Banner, Button, Card, Pill, SectionLabel, Skeleton, Switch, cx } from "@/components/ui";
 
@@ -92,6 +96,93 @@ export default function AppClient() {
   const ctrl = useRef<AbortController | null>(null);
   useEffect(() => saveProfile(profile), [profile]);
 
+  // ---- server memory (loaded only if a session already exists; visiting alone stores nothing)
+  const [plan, setPlan] = useState<PlanItem[]>([]);
+  const [hasSession, setHasSession] = useState(meApi.hasSession);
+  const [lastAnswer, setLastAnswer] = useState<StoredAnswer | null>(null);
+  const [events, setEvents] = useState<AgentEvent[]>([]);
+  const [running, setRunning] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const [planNote, setPlanNote] = useState<string | null>(null);
+  const assistantRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    meApi
+      .load()
+      .then((me) => {
+        if (!me) return setHasSession(false);
+        setPlan(me.plan);
+        const last = [...me.messages].reverse().find((m) => m.role === "assistant");
+        if (last) setLastAnswer(last.content as unknown as StoredAnswer);
+      })
+      .catch(() => {});
+  }, []);
+
+  const ask = useCallback(
+    async (message: string, jobId: number | null = null) => {
+      setGap((g) => ({ ...g, open: false }));
+      assistantRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setEvents([]);
+      setAgentError(null);
+      setRunning(true);
+      try {
+        await runAgent(profile, { message, job_id: jobId }, (ev) => setEvents((prev) => [...prev, ev]));
+        setHasSession(true);
+      } catch (e) {
+        setAgentError(errMsg(e));
+      } finally {
+        setRunning(false);
+      }
+    },
+    [profile],
+  );
+  const addPlan = useCallback(
+    async (skill: string, source: "user" | "agent" | "why_not_me" = "agent") => {
+      try {
+        setPlan((await meApi.addPlan(profile, skill, source)).plan);
+        setHasSession(true);
+        setPlanNote(null);
+      } catch (e) {
+        setPlanNote(errMsg(e));
+      }
+    },
+    [profile],
+  );
+  const setStatus = useCallback(async (id: number, status: PlanItem["status"]) => {
+    try {
+      const r = await meApi.setStatus(id, status);
+      setPlan(r.plan);
+      const item = r.plan.find((p) => p.id === id);
+      if (r.added_to_profile && item) {
+        setProfile((p) => (p.skills.includes(item.skill) ? p : { ...p, skills: [...p.skills, item.skill] }));
+        setPlanNote(`${item.skill} added to your profile. Rank again to see the effect.`);
+      }
+    } catch (e) {
+      setPlanNote(errMsg(e));
+    }
+  }, []);
+  const removePlan = useCallback(async (id: number) => {
+    try {
+      setPlan((await meApi.removePlan(id)).plan);
+    } catch (e) {
+      setPlanNote(errMsg(e));
+    }
+  }, []);
+  const forget = useCallback(async () => {
+    try {
+      await meApi.forget();
+      setPlan([]);
+      setEvents([]);
+      setLastAnswer(null);
+      setHasSession(false);
+      setData(null);
+      setProfile(EMPTY);
+      setPlanNote("Deleted. Nothing about you is stored any more.");
+    } catch (e) {
+      setPlanNote(errMsg(e));
+    }
+  }, []);
+  const plannedSkills = plan.map((p) => p.skill);
+
   const runRank = useCallback(async () => {
     ctrl.current?.abort();
     const c = new AbortController();
@@ -128,7 +219,7 @@ export default function AppClient() {
           <div className="flex items-start justify-between gap-2">
             <div>
               <h1 className="text-lg font-semibold">Your profile</h1>
-              <p className="text-xs text-muted">Saved only in this browser.</p>
+              <p className="text-xs text-muted">Saved in this browser. No name, email or resume needed.</p>
             </div>
             <button
               onClick={() => setProfile(EMPTY)}
@@ -150,6 +241,16 @@ export default function AppClient() {
             </Button>
           )}
         </Card>
+        <div className="mt-4">
+          <PlanCard
+            plan={plan}
+            hasSession={hasSession}
+            note={planNote}
+            onStatus={setStatus}
+            onRemove={removePlan}
+            onForget={forget}
+          />
+        </div>
       </aside>
 
       <section className="min-w-0" aria-live="polite">
@@ -162,6 +263,20 @@ export default function AppClient() {
           )}
           {error && <Banner tone="bad">{error}</Banner>}
         </div>
+
+        {ready && (
+          <div ref={assistantRef} className="mb-6 scroll-mt-20">
+            <AssistantCard
+              events={events}
+              running={running}
+              error={agentError}
+              lastAnswer={lastAnswer}
+              plannedSkills={plannedSkills}
+              onAsk={(m) => ask(m)}
+              onAddPlan={(s) => addPlan(s, "agent")}
+            />
+          </div>
+        )}
 
         {!data && !loading && !error && (
           <Card className="grid place-items-center gap-3 border-dashed p-12 text-center">
@@ -196,7 +311,17 @@ export default function AppClient() {
         )}
       </section>
 
-      {gap.open && <GapPanel data={gap.data} loading={gap.loading} error={gap.error} onClose={closeGap} />}
+      {gap.open && (
+        <GapPanel
+          data={gap.data}
+          loading={gap.loading}
+          error={gap.error}
+          onClose={closeGap}
+          onAddPlan={(s) => addPlan(s, "why_not_me")}
+          onAsk={(jobId) => ask(jobId ? "Why am I not ranking higher for this job?" : "What should I learn next?", jobId)}
+          plannedSkills={plannedSkills}
+        />
+      )}
     </div>
   );
 }

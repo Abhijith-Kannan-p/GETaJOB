@@ -6,8 +6,8 @@ on the 150-job fixture snapshot for a profile with Python, SQL, pandas, Git and 
 internships: *"Data Science Intern: adding NumPy, R and Keras moves it from #41 to #13 (about 70 h, my
 estimates)."* These are the ranker's own numbers, not a hiring prediction.
 
-> Status: slices 1–3 of 7 (ingestion and hybrid search; free-tier deploy; ranker and Why-Not-Me).
-> The agent, evals and the remaining hardening come in later slices. Nothing below describes a feature
+> Status: slices 1–4 of 7 (ingestion and hybrid search; free-tier deploy; ranker and Why-Not-Me; grounded
+> agent with session memory). Evals and the remaining hardening come in later slices. Nothing below describes a feature
 > that does not exist yet.
 
 ## Data sources
@@ -58,7 +58,7 @@ Postgres + pgvector: HNSW (cosine) + GIN full-text; one SQL query fuses both wit
 |---|---|
 | `/` | Landing: the name fades in once (2 s, skipped under reduced motion); Enter button, or press the Enter key; scroll down for **live** tiles (open-role count, three real searches, a live Why-Not-Me result for a sample profile, roles by level, companies, score weights). No mock data. |
 | `/search` | Hybrid search with level/remote filters; `?q=` links run immediately |
-| `/app` | Profile built from buttons (role presets, popular-skill toggles, level pills, location presets, remote switch) → ranked jobs with score bars → "Why not me?" panel |
+| `/app` | Profile built from buttons (role presets, popular-skill toggles, level pills, location presets, remote switch) → ranked jobs with score bars → "Why not me?" panel; the assistant (preset question buttons, live trace, cited answer, "add to plan"); learning plan; Forget me |
 
 Navy (#14213D) / cream (#F4EDE0) / coral (#FF6B5B) theme with frosted-glass surfaces, all from design tokens
 in `frontend/app/globals.css`. Coral is used for fills with navy text on top; small coral text uses a darker
@@ -107,6 +107,50 @@ keyword terms. Only the skill-overlap term changes, because nothing else in the 
 - Ranks are relative to a 200-job pool for *this* profile. Real re-retrieval after learning a skill could
   differ, because the semantic term would also move.
 
+## The assistant (agent)
+
+[run.py](backend/app/agent/run.py) · [tools.py](backend/app/agent/tools.py) · [grounding.py](backend/app/agent/grounding.py)
+
+```
+question ─> Gemini (function calling, ≤ 3 rounds) ─> read-only tools over the REAL ranker
+              rank_jobs · best_skills · explain_job · simulate_skill · search_jobs
+                 │ every result becomes numbered facts: "F4: Job 17 … ranks #4 of 200 …"
+                 ▼
+            Gemini structured output (JSON schema): headline / points / next steps, each citing fact ids
+                 ▼
+            grounding check ─> drop unsupported sentences ─> stream to the browser (SSE)
+```
+
+- **Bounded:** at most 4 LLM calls per run (3 tool rounds + 1 narrative), and at most 3 tool calls per round.
+  These are hard limits in code, and a test checks them with a model that never stops calling tools.
+- **Grounding check** (pure, property-tested). A sentence is kept only if:
+  - it cites facts that exist;
+  - every number in it appears in the facts it cites;
+  - every skill it names appears in the facts it cites;
+  - it has no links.
+  Failing sentences are dropped, never rewritten. If nothing survives, a rule-based narrative built from the
+  same facts is shown instead, and it must pass the same check.
+- **The model never sees job descriptions,** only the facts the tools produce. The user's question is
+  framed as data, not instructions.
+- **Degrades instead of failing:**
+  - With no key, mock mode or a quota error, the run switches to fixed rule-based steps and a rule-based
+    narrative.
+  - Quota errors are never retried.
+  - The trace says which mode ran.
+- **Daily budget:** `DAILY_MAX_RUNS = ⌊0.7 × LLM_RPD / 4⌋`, which is 70 for an RPD of 400. Worst-case agent
+  calls therefore stay under 70% of the daily LLM quota.
+  - The env var can only lower this cap.
+  - Past the cap, runs continue in rule-based mode.
+- **Other limits:** 10 runs per session per day, 4 per minute per IP, and 2 at once.
+- **Memory:** an anonymous session, with no account.
+  - The browser keeps a random token; the server stores only `sha256(token)`.
+  - It holds the profile, the learning plan (marking a skill *done* adds it to the profile) and the last
+    messages, which give the agent context.
+  - Sessions idle for 30 days are deleted.
+- **Forget me** (`DELETE /api/me`) deletes the profile, plan, messages and the cached profile embedding, and
+  clears in-memory caches.
+- **Privacy guard:** a question that looks like it contains an email address or phone number is refused.
+
 ## Local development (Windows PowerShell)
 
 Prerequisites: Python 3.11, Node 22, Docker Desktop. **Start Docker Desktop first.**
@@ -151,7 +195,8 @@ Other commands (from `backend/`):
 
 `DATABASE_URL`, `GEMINI_API_KEY`, `LLM_MODEL`, `EMBED_MODEL`, `EMBED_DIM`, `LLM_RPM`, `LLM_RPD`,
 `EMBED_RPM`, `EMBED_RPD`, `EMBED_TPM`, `EMBED_RESERVE_RPD`, `MOCK_LLM`, `CORS_ORIGINS`, `LOG_LEVEL`,
-`MAX_ACTIVE_JOBS`, `HTTP_SLEEP_S`, `USER_AGENT`. See `.env.example`.
+`MAX_ACTIVE_JOBS`, `HTTP_SLEEP_S`, `USER_AGENT`, optional `DAILY_MAX_RUNS` (can only lower the computed cap),
+`SESSION_MAX_RUNS` (default 10). See `.env.example`.
 
 ## Deployment (all free tier)
 
@@ -181,3 +226,9 @@ GitHub Actions nightly sync ───────────────> Neon 
 
 Free-tier LLM/embedding prompts may be used by the provider, so the app never asks for resumes or
 personal data. Search queries are embedded via the Gemini API when semantic search is on.
+
+- **What reaches Gemini:** assistant questions (at most 300 characters, with a notice beside the box), the
+  profile's skills, roles, levels and locations, and facts about public job postings. The profile's
+  free-text note is embedded for matching but never sent to the chat model.
+- **Nothing is stored server-side until you use the assistant or the plan.** Then it is kept under an
+  anonymous id and deleted after 30 days idle, or immediately with **Forget me**.

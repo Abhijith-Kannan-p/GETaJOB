@@ -10,6 +10,7 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 log = logging.getLogger("getajob.config")
@@ -21,11 +22,15 @@ CONSERVATIVE_RPM = 5
 CONSERVATIVE_RPD = 100
 DEFAULT_EMBED_DIM = 768
 DEFAULT_EMBED_TPM = 24_000
+# Worst case LLM calls in one agent run: 3 tool-calling rounds + 1 structured narrative.
+AGENT_MAX_LLM_CALLS = 4
+# Agent runs may use at most this share of the daily LLM quota (the rest is headroom).
+AGENT_DAILY_SHARE = 0.7
 _warned: set[str] = set()
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=BACKEND_DIR / ".env", extra="ignore", populate_by_name=True)
 
     database_url: str = "postgresql://getajob:getajob@localhost:5432/getajob"
 
@@ -43,6 +48,9 @@ class Settings(BaseSettings):
     embed_reserve_rpd: int = 250
 
     mock_llm: bool = False
+    # optional; can only LOWER the computed cap (see daily_max_runs)
+    daily_max_runs_env: int | None = Field(None, alias="DAILY_MAX_RUNS")
+    session_max_runs: int = 10  # per anonymous session per (Pacific) day
     cors_origins: str = "http://localhost:3000"
     # optional regex for extra origins, e.g. this project's per-deployment Vercel URLs
     cors_origin_regex: str | None = None
@@ -82,6 +90,13 @@ class Settings(BaseSettings):
                 log.warning("%s unset; using conservative default %s", name.upper(), fallback)
             return fallback
         return val
+
+    def daily_max_runs(self) -> int:
+        """Agent runs per day so that worst-case LLM calls stay under 70% of LLM_RPD (400 -> 70 runs)."""
+        cap = int(AGENT_DAILY_SHARE * self.limit("llm_rpd") // AGENT_MAX_LLM_CALLS)
+        if self.daily_max_runs_env is not None and self.daily_max_runs_env >= 0:
+            return min(cap, self.daily_max_runs_env)
+        return cap
 
     def ingest_embed_budget(self) -> int:
         """Daily embedding requests ingestion may reach (the rest is reserved for live queries)."""

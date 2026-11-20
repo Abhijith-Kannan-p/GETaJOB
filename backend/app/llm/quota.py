@@ -44,6 +44,8 @@ _exhausted_until: dict[str, float] = {}  # set when the provider itself returns 
 
 def _limits(kind: str) -> tuple[int, int]:
     s = get_settings()
+    if kind == "agent_run":  # a daily counter only; its per-minute pacing is the llm window
+        return 10**9, s.daily_max_runs()
     return s.limit(f"{kind}_rpm"), s.limit(f"{kind}_rpd")
 
 

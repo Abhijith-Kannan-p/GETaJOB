@@ -150,5 +150,8 @@ def embed_query(c, embedder: Embedder | None, q: str) -> tuple[list[float] | Non
     return (v, None) if v is not None else (None, "fulltext_only")
 
 
-def clear_lru_for_tests() -> None:
+def clear_query_lru() -> None:
     _lru.clear()
+
+
+clear_lru_for_tests = clear_query_lru

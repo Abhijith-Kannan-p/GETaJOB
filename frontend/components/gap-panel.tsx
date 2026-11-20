@@ -15,7 +15,17 @@ function RankMove({ r }: { r: { before: number; after: number } | null }) {
   );
 }
 
-function FixRow({ e, forJob }: { e: Effect; forJob: boolean }) {
+function FixRow({
+  e,
+  forJob,
+  onAddPlan,
+  planned,
+}: {
+  e: Effect;
+  forJob: boolean;
+  onAddPlan?: (s: string) => void;
+  planned: boolean;
+}) {
   return (
     <li className="rounded-xl border border-line p-3">
       <div className="flex items-baseline justify-between gap-2">
@@ -24,6 +34,16 @@ function FixRow({ e, forJob }: { e: Effect; forJob: boolean }) {
           {e.effort_tier} · ~{e.effort_hours} h <span className="italic">(my estimate)</span>
         </span>
       </div>
+      {onAddPlan && (
+        <button
+          type="button"
+          disabled={planned}
+          onClick={() => onAddPlan(e.skill)}
+          className="mt-2 inline-flex items-center gap-1 rounded-lg bg-accent-soft px-2 py-1 text-xs font-medium text-accent-ink hover:bg-accent hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:opacity-60"
+        >
+          {planned ? "✓ In your plan" : "+ Add to my plan"}
+        </button>
+      )}
       <p className="mt-1 text-sm text-muted">
         {forJob && e.job_rank && (
           <>
@@ -43,11 +63,17 @@ export function GapPanel({
   loading,
   error,
   onClose,
+  onAddPlan,
+  onAsk,
+  plannedSkills = [],
 }: {
   data: WhyNotResponse | null;
   loading: boolean;
   error: string | null;
   onClose: () => void;
+  onAddPlan?: (skill: string) => void;
+  onAsk?: (jobId: number | null) => void;
+  plannedSkills?: string[];
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -131,7 +157,13 @@ export function GapPanel({
               {data.fixes.length > 0 ? (
                 <ul className="mt-2 space-y-2">
                   {data.fixes.map((e) => (
-                    <FixRow key={e.skill} e={e} forJob={forJob} />
+                    <FixRow
+                      key={e.skill}
+                      e={e}
+                      forJob={forJob}
+                      onAddPlan={onAddPlan}
+                      planned={plannedSkills.includes(e.skill)}
+                    />
                   ))}
                 </ul>
               ) : (
@@ -161,6 +193,16 @@ export function GapPanel({
                   About {c.total_hours} h in total.
                 </p>
               </section>
+            )}
+
+            {onAsk && (
+              <button
+                type="button"
+                onClick={() => onAsk(data.job?.id ?? null)}
+                className="w-full rounded-xl bg-navy px-4 py-2.5 text-sm font-medium text-cream hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+              >
+                Ask the assistant to explain {forJob ? "this job" : "this"} →
+              </button>
             )}
 
             <p className="rounded-xl border border-line bg-surface-2 p-3 text-xs text-muted">

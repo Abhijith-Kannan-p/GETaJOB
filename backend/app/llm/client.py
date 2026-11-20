@@ -1,4 +1,4 @@
-"""The ONE wrapper every Gemini call goes through (embeddings now, generation in slice 4).
+"""The ONE wrapper every Gemini call goes through (embeddings and generation).
 
 Guarantees: 30 s timeout, at most 2 retries on transient errors (5xx / network) with backoff,
 no retry on 429 (quota is a state, not a glitch), quota guard before every call,
@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import math
 import time
+from dataclasses import dataclass, field
 from typing import Protocol
 
 from app.config import get_settings
@@ -55,7 +56,15 @@ def _genai():
 
 
 def call_with_retries(
-    kind: str, fn, *, units: int = 1, tokens: int = 0, conn=None, wait: bool = False, day_ceiling: int | None = None
+    kind: str,
+    fn,
+    *,
+    units: int = 1,
+    tokens: int = 0,
+    conn=None,
+    wait: bool = False,
+    day_ceiling: int | None = None,
+    max_wait: float = 65,
 ):
     """Run fn() under quota guard + retry policy. Returns (result, retries, ms).
 
@@ -65,7 +74,7 @@ def call_with_retries(
 
     if quota.provider_exhausted(kind):
         raise quota.QuotaExceeded(kind, "provider")
-    quota.acquire_minute(kind, units, tokens=tokens, wait=wait)
+    quota.acquire_minute(kind, units, tokens=tokens, wait=wait, max_wait=max_wait)
     if conn is not None:
         quota.count_day(conn, kind, units, ceiling=day_ceiling)
     last: Exception | None = None
@@ -152,5 +161,203 @@ def get_embedder() -> Embedder | None:
     """Real embedder if configured, else None (callers fall back to full-text only)."""
     try:
         return GeminiEmbedder()
+    except ProviderUnavailable:
+        return None
+
+
+# ---------------------------------------------------------------- generation (agent) ----------------------------
+# A provider-neutral surface so the agent loop and its tests never touch google-genai types.
+
+
+class BadOutput(Exception):
+    """The model answered, but not in the shape we asked for. Not retried (a retry costs quota)."""
+
+
+@dataclass
+class ToolSpec:
+    name: str
+    description: str
+    parameters: dict  # JSON Schema (object)
+
+
+@dataclass
+class ToolCall:
+    name: str
+    args: dict
+
+
+@dataclass
+class Reply:
+    text: str
+    calls: list[ToolCall] = field(default_factory=list)
+
+
+class Chat(Protocol):
+    def send(self, text: str | None = None, results: list[tuple[str, dict]] | None = None) -> Reply: ...
+
+
+class LLM(Protocol):
+    def chat(self, system: str, tools: list[ToolSpec]) -> Chat: ...
+
+    def structured(self, system: str, prompt: str, schema: dict) -> dict: ...
+
+
+GEN_MAX_WAIT_S = 20  # inside a run, wait briefly for the per-minute window instead of failing the run halfway
+
+
+def _usage(resp) -> dict:
+    u = getattr(resp, "usage_metadata", None)
+    if u is None:
+        return {}
+    return {
+        "prompt_tokens": u.prompt_token_count,
+        "output_tokens": u.candidates_token_count,
+        "thought_tokens": u.thoughts_token_count,
+    }
+
+
+class GeminiLLM:
+    """Gemini generation through call_with_retries: quota guard, 30 s timeout, 2 transient retries, token log."""
+
+    def __init__(self, conn=None):
+        s = get_settings()
+        if not s.has_llm:
+            raise ProviderUnavailable("LLM not configured (GEMINI_API_KEY / LLM_MODEL / MOCK_LLM)")
+        self.model = s.llm_model
+        self.conn = conn
+        self.calls = 0
+
+    def _generate(self, contents, config, purpose: str):
+        client = _genai()
+        tokens = quota.estimate_tokens([str(contents)])
+
+        def go():
+            return client.models.generate_content(model=self.model, contents=contents, config=config)
+
+        resp, retries, ms = call_with_retries(
+            "llm", go, tokens=tokens, conn=self.conn, wait=True, max_wait=GEN_MAX_WAIT_S
+        )
+        self.calls += 1
+        log.info(
+            "llm_call",
+            extra={
+                "kind": "llm",
+                "model": self.model,
+                "purpose": purpose,
+                "retries": retries,
+                "ms": round(ms),
+                **_usage(resp),
+            },
+        )
+        if not resp.candidates or resp.candidates[0].content is None:
+            raise BadOutput("empty response (blocked or no candidate)")
+        return resp
+
+    def chat(self, system: str, tools: list[ToolSpec]) -> GeminiChat:
+        return GeminiChat(self, system, tools)
+
+    def structured(self, system: str, prompt: str, schema: dict) -> dict:
+        import json
+
+        from google.genai import types
+
+        cfg = types.GenerateContentConfig(
+            system_instruction=system,
+            response_mime_type="application/json",
+            response_json_schema=schema,
+            temperature=0.2,
+            max_output_tokens=1500,
+        )
+        resp = self._generate(prompt, cfg, "narrative")
+        try:
+            out = json.loads(resp.text or "")
+        except ValueError:
+            raise BadOutput("narrative was not valid JSON") from None
+        if not isinstance(out, dict):
+            raise BadOutput("narrative was not a JSON object")
+        return out
+
+
+class GeminiChat:
+    """Keeps the provider's own Content objects (including thought signatures) and replays them each turn."""
+
+    def __init__(self, llm: GeminiLLM, system: str, tools: list[ToolSpec]):
+        from google.genai import types
+
+        self.llm = llm
+        self.contents: list = []
+        self.config = types.GenerateContentConfig(
+            system_instruction=system,
+            tools=[
+                types.Tool(
+                    function_declarations=[
+                        types.FunctionDeclaration(
+                            name=t.name, description=t.description, parameters_json_schema=t.parameters
+                        )
+                        for t in tools
+                    ]
+                )
+            ],
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+            temperature=0.2,
+            max_output_tokens=800,
+        )
+
+    def send(self, text=None, results=None) -> Reply:
+        from google.genai import types
+
+        parts = []
+        if text:
+            parts.append(types.Part.from_text(text=text))
+        for name, res in results or []:
+            parts.append(types.Part.from_function_response(name=name, response=res))
+        self.contents.append(types.Content(role="user", parts=parts))
+        resp = self.llm._generate(self.contents, self.config, "tools")
+        content = resp.candidates[0].content
+        self.contents.append(content)
+        calls, texts = [], []
+        for p in content.parts or []:
+            if p.function_call is not None:
+                calls.append(ToolCall(p.function_call.name or "", dict(p.function_call.args or {})))
+            elif p.text and not p.thought:
+                texts.append(p.text)
+        return Reply("".join(texts), calls)
+
+
+class FakeLLM:
+    """Scripted, offline LLM for tests and recorded demos: replies are consumed in order."""
+
+    def __init__(self, replies: list[Reply] | None = None, narrative: dict | Exception | None = None):
+        self.replies = list(replies or [])
+        self.narrative = narrative
+        self.calls = 0
+        self.prompts: list[str] = []
+
+    def chat(self, system, tools):
+        fake = self
+
+        class _C:
+            def send(self, text=None, results=None):
+                fake.calls += 1
+                fake.prompts.append(text or str(results))
+                if isinstance(fake.replies[0] if fake.replies else None, Exception):
+                    raise fake.replies.pop(0)
+                return fake.replies.pop(0) if fake.replies else Reply("done")
+
+        return _C()
+
+    def structured(self, system, prompt, schema):
+        self.calls += 1
+        self.prompts.append(prompt)
+        if isinstance(self.narrative, Exception):
+            raise self.narrative
+        if self.narrative is None:
+            raise BadOutput("no scripted narrative")
+        return self.narrative(prompt) if callable(self.narrative) else self.narrative
+
+
+def get_llm(conn=None) -> LLM | None:
+    try:
+        return GeminiLLM(conn)
     except ProviderUnavailable:
         return None

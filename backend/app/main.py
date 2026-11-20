@@ -14,14 +14,17 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
 from app import logs
+from app.api.agent import router as agent_router
 from app.api.limits import limiter
 from app.api.rank import router as rank_router
 from app.api.serialize import job_out
+from app.api.session import prune_expired
+from app.api.session import router as session_router
 from app.config import BACKEND_DIR, get_settings
 from app.db import close_pool
 from app.db import conn as db_conn
 from app.db.migrate import migrate
-from app.llm.client import get_embedder
+from app.llm.client import GeminiLLM, get_embedder
 from app.rank.scorer import TERMS, load_weights
 from app.search.hybrid import SearchFilters, embed_query, hybrid_search
 
@@ -40,10 +43,21 @@ async def lifespan(app: FastAPI):
     except Exception:  # noqa: BLE001 - /health must still come up so the deploy can be diagnosed
         log.exception("migration failed at startup")
     app.state.embedder = get_embedder()
+    # a factory, not an instance: each run gets its own LLM bound to that run's DB connection (day counter)
+    app.state.llm_factory = GeminiLLM if s.has_llm else None
+    try:
+        with db_conn() as c:
+            n = prune_expired(c)
+        if n:
+            log.info("pruned expired sessions", extra={"n": n})
+    except Exception:  # noqa: BLE001
+        log.exception("session prune failed")
     log.info(
         "startup",
         extra={
             "semantic": app.state.embedder is not None,
+            "agent_llm": s.has_llm,
+            "daily_max_runs": s.daily_max_runs(),
             "mock_llm": s.mock_llm,
             "cors_origins": s.cors_origin_list,
             "cors_origin_regex": s.cors_origin_regex,
@@ -56,6 +70,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="GETaJOB API", lifespan=lifespan)
 app.state.limiter = limiter
 app.include_router(rank_router)
+app.include_router(session_router)
+app.include_router(agent_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origin_list,
