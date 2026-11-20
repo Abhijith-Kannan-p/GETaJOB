@@ -136,6 +136,9 @@ def run_agent(
     yield _event("start", mode=mode, max_llm_calls=AGENT_MAX_LLM_CALLS if llm else 0)
     ctx.profile_fact()
     notice = None
+    # Why the LLM path stopped early, if it did: "quota" | "provider" (infrastructure) | "bad_output" (the model
+    # answered in the wrong shape). Evals skip infrastructure stops but count bad output as a model failure.
+    interrupted = None
     llm_ok = llm is not None
 
     if llm_ok:
@@ -158,9 +161,11 @@ def run_agent(
                         yield _event("memory", **memory)
                     results.append((call.name, res))
         except QuotaExceeded as e:
-            llm_ok, notice = False, f"The free AI quota is used up for now ({e.scope}); showing a rule-based summary."
-        except (ProviderUnavailable, BadOutput):
-            llm_ok, notice = False, "The AI model is unavailable right now; showing a rule-based summary."
+            llm_ok, interrupted = False, "quota"
+            notice = f"The free AI quota is used up for now ({e.scope}); showing a rule-based summary."
+        except (ProviderUnavailable, BadOutput) as e:
+            llm_ok, interrupted = False, "bad_output" if isinstance(e, BadOutput) else "provider"
+            notice = "The AI model is unavailable right now; showing a rule-based summary."
 
     if not any(k in ctx.data for k in ("rank_jobs", "explain_job", "best_skills")):
         yield from _run_defaults(ctx, job_id)
@@ -173,9 +178,11 @@ def run_agent(
             try:
                 raw = llm.structured(NARRATIVE_SYSTEM, prompt, NARRATIVE_SCHEMA)
             except QuotaExceeded:
+                interrupted = "quota"
                 notice = "The free AI quota is used up for now; showing a rule-based summary."
                 break
-            except (ProviderUnavailable, BadOutput):
+            except (ProviderUnavailable, BadOutput) as e:
+                interrupted = "bad_output" if isinstance(e, BadOutput) else "provider"
                 notice = "The AI answer could not be used; showing a rule-based summary."
                 break
             rep = _ground(ctx, raw)
@@ -202,7 +209,12 @@ def run_agent(
         source=source,
         narrative=report.narrative.to_dict(),
         facts=ctx.book.facts,
-        grounding={"kept": report.kept, "dropped": llm_dropped + report.dropped, "outcome": outcome},
+        grounding={
+            "kept": report.kept,
+            "dropped": llm_dropped + report.dropped,
+            "outcome": outcome,
+            "interrupted": interrupted,
+        },
         degraded=ctx.degraded,
         disclaimer=DISCLAIMER,
     )

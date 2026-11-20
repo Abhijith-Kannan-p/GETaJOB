@@ -6,9 +6,10 @@ on the 150-job fixture snapshot for a profile with Python, SQL, pandas, Git and 
 internships: *"Data Science Intern: adding NumPy, R and Keras moves it from #41 to #13 (about 70 h, my
 estimates)."* These are the ranker's own numbers, not a hiring prediction.
 
-> Status: slices 1–4 of 7 (ingestion and hybrid search; free-tier deploy; ranker and Why-Not-Me; grounded
-> agent with session memory). Evals and the remaining hardening come in later slices. Nothing below describes a feature
-> that does not exist yet.
+> Status: slices 1–6 of 7 (ingestion and hybrid search; free-tier deploy; ranker and Why-Not-Me; grounded
+> agent with session memory; UI; evals). Two evals still need input: skill-extractor labels (hand-checked) and
+> the live-Gemini grounding run. CI and the remaining hardening come in slice 7. Nothing below describes a
+> feature that does not exist yet.
 
 ## Data sources
 
@@ -59,6 +60,7 @@ Postgres + pgvector: HNSW (cosine) + GIN full-text; one SQL query fuses both wit
 | `/` | Landing: the name fades in once (2 s, skipped under reduced motion); Enter button, or press the Enter key; scroll down for **live** tiles (open-role count, three real searches, a live Why-Not-Me result for a sample profile, roles by level, companies, score weights). No mock data. |
 | `/search` | Hybrid search with level/remote filters; `?q=` links run immediately |
 | `/app` | Profile built from buttons (role presets, popular-skill toggles, level pills, location presets, remote switch) → ranked jobs with score bars → "Why not me?" panel; the assistant (preset question buttons, live trace, cited answer, "add to plan"); learning plan; Forget me. On phones: Profile / Jobs / Assistant tabs |
+| `/eval` | Measured eval numbers (from `eval/results.json` via `/api/eval`), each with n, date and method; unmeasured sections say so |
 | `/dev/components` | Living style guide: every token and shared primitive in both themes (not indexed) |
 
 Navy (#14213D) / cream (#F4EDE0) / coral (#FF6B5B) with frosted-glass surfaces:
@@ -176,6 +178,20 @@ question ─> Gemini (function calling, ≤ 2 rounds) ─> tools over the REAL r
   clears in-memory caches.
 - **Privacy guard:** a question that looks like it contains an email address or phone number is refused.
 
+## Evals
+
+Scripts in [backend/evals/](backend/evals/); workflow and labelling guide in [eval/README.md](eval/README.md);
+numbers in [eval/RESULTS.md](eval/RESULTS.md) and on `/eval`. Every number is stored with how it was measured,
+and a section that has not been run shows no number.
+
+| Eval | Result so far |
+|---|---|
+| Why-Not-Me simulation vs. full re-rank | **100% agreement**: 1,532 simulations over 7 synthetic profiles, 229,800 job ranks compared, max score difference 0 (local DB, 150 jobs, hybrid pools) |
+| Search latency, local | p50 **22 ms**, p95 **33 ms** round trip; server time p50 4 ms, p95 6 ms (n = 60, 150 jobs, cached query embeddings) |
+| Search latency, deployed | not measured yet |
+| Skill extractor P/R/F1 | 70 postings from 30 companies sampled and pre-filled; **waiting for hand labels** |
+| LLM grounding (first try / after retry / fallback) | **not run yet** (real Gemini, ≤ 140 calls for n = 35) |
+
 ## Local development (Windows PowerShell)
 
 Prerequisites: Python 3.11, Node 22, Docker Desktop. **Start Docker Desktop first.**
@@ -210,7 +226,11 @@ Other commands (from `backend/`):
 | Command | What it does | API calls |
 |---|---|---|
 | `.\.venv\Scripts\python -m pytest -q` | tests (fakes only; DB tests need docker db) | none |
-| `.\.venv\Scripts\ruff check app tests` | lint | none |
+| `.\.venv\Scripts\ruff check .` | lint (app, evals, tests) | none |
+| `.\.venv\Scripts\python -m evals.simulation` | eval 2: simulation vs. full re-rank | ≤ 7 embeddings |
+| `.\.venv\Scripts\python -m evals.latency --base http://127.0.0.1:8000 --label local` | eval 4: search p50/p95 | ≤ 20 embeddings |
+| `.\.venv\Scripts\python -m evals.grounding --n 35` | eval 3: grounding with real Gemini (resumable) | ≤ 140 LLM calls |
+| `.\.venv\Scripts\python -m evals.skills score --tag before` | eval 1: extractor P/R/F1 on reviewed labels | none |
 | `.\.venv\Scripts\python -m app.ingest.run --no-embed` | live sync from all boards, no embeddings | job boards only |
 | `.\.venv\Scripts\python -m app.ingest.run` | live sync + embed pending rows within the ingest budget | embeddings |
 | `.\.venv\Scripts\python -m app.ingest.verify_boards` | re-verify board slugs | job boards only |

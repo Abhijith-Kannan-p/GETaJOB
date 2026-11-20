@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, Search, Sparkles } from "lucide-react";
+import { Briefcase, FlaskConical, Search, Sparkles } from "lucide-react";
 import { ThemeToggle } from "./theme";
 import { cx } from "./ui";
 
 const NAV = [
   { href: "/search", label: "Search", icon: Search },
   { href: "/app", label: "Match my profile", icon: Sparkles },
+  { href: "/eval", label: "Evals", icon: FlaskConical },
 ];
 
 export function SiteHeader() {

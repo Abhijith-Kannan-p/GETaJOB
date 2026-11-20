@@ -45,3 +45,6 @@ Thumbs.db
 
 # personal resume notes (not part of the project)
 RESUME_BRIEF.md
+
+# eval: regenerable review file (python -m evals.skills review)
+eval/skill_review.md

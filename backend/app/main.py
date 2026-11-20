@@ -29,7 +29,8 @@ from app.rank.scorer import TERMS, load_weights
 from app.search.hybrid import SearchFilters, embed_query, hybrid_search
 
 log = logging.getLogger("getajob.api")
-EVAL_RESULTS = BACKEND_DIR.parent / "eval" / "results.json"
+# Repo checkout: <repo>/eval/results.json. Docker image: /app/eval/results.json (copied by the Dockerfile).
+EVAL_CANDIDATES = (BACKEND_DIR / "eval" / "results.json", BACKEND_DIR.parent / "eval" / "results.json")
 SENIORITIES = {"intern", "new_grad", "entry", "mid", "senior", "unknown"}
 
 
@@ -137,12 +138,7 @@ def stats():
         top = c.execute(
             "SELECT company, count(*) AS n FROM jobs WHERE closed_at IS NULL GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 12"
         ).fetchall()
-    eval_summary = None
-    if EVAL_RESULTS.exists():
-        try:
-            eval_summary = json.loads(EVAL_RESULTS.read_text(encoding="utf-8")).get("summary")
-        except ValueError:
-            eval_summary = None
+    eval_summary = (load_eval() or {}).get("summary")
     active = j["active"] or 0
     return {
         "jobs_indexed": j["indexed"],
@@ -157,6 +153,33 @@ def stats():
         "top_companies": [{"company": r["company"], "jobs": r["n"]} for r in top],
         "ranking_weights": {t: load_weights().of(t) for t in TERMS},
         "eval": eval_summary,
+    }
+
+
+def load_eval() -> dict | None:
+    for path in EVAL_CANDIDATES:
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except ValueError:
+                log.warning("eval results unreadable", extra={"path": str(path)})
+    return None
+
+
+@app.get("/api/eval")
+def eval_results():
+    """Offline eval results (measured by backend/evals, committed as eval/results.json) plus the live,
+    anonymous per-day grounding-outcome counters from real assistant runs. The two are never mixed."""
+    with db_conn() as c:
+        rows = c.execute(
+            """SELECT name, sum(count)::int AS n, min(day) AS since FROM events
+               WHERE name LIKE 'grounding_%%' GROUP BY name"""
+        ).fetchall()
+    live = {r["name"].removeprefix("grounding_"): r["n"] for r in rows}
+    since = min((r["since"] for r in rows), default=None)
+    return {
+        "offline": load_eval(),
+        "live_grounding": {"counts": live, "since": since.isoformat() if since else None},
     }
 
 

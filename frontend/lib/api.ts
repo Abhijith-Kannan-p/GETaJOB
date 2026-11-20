@@ -79,6 +79,62 @@ export const api = {
     return get<SearchResponse>(`/api/search?${p}`, signal);
   },
   stats: (signal?: AbortSignal) => get<Stats>("/api/stats", signal),
+  evals: (signal?: AbortSignal) => get<EvalResponse>("/api/eval", signal),
+};
+
+// ---------- /eval (shapes written by backend/evals; every section is optional until measured) ----------
+export type PRF = { precision: number; recall: number; f1: number; tp: number; fp: number; fn: number };
+export type ExtractorRun = {
+  measured_at: string;
+  method: string;
+  n_postings: number;
+  n_gold: number;
+  n_companies: number;
+  not_in_taxonomy: number;
+  taxonomy_sha: string;
+  micro: PRF;
+  macro: { precision: number; recall: number; f1: number };
+  top_false_positives: { skill: string; count: number }[];
+  top_false_negatives: { skill: string; count: number }[];
+};
+export type LatencyRun = {
+  measured_at: string;
+  method: string;
+  n: number;
+  round_trip_ms: { p50: number; p95: number };
+  server_ms: { p50: number; p95: number };
+  first_request_ms: number | null;
+  jobs_active?: number;
+};
+export type GroundingOutcome = "first_try" | "after_retry" | "fallback";
+export type EvalResults = {
+  updated_at?: string;
+  extractor?: { before?: ExtractorRun; after?: ExtractorRun };
+  simulation?: {
+    measured_at: string;
+    method: string;
+    agreement: number;
+    n_simulations: number;
+    n_rank_comparisons: number;
+    n_profiles: number;
+    max_abs_score_diff: number;
+    pool_mode: string[];
+  };
+  grounding?: {
+    measured_at: string;
+    method: string;
+    model: string;
+    n_runs: number;
+    counts: Record<GroundingOutcome, number>;
+    rates: Record<GroundingOutcome, number>;
+    mean_llm_calls: number;
+    bad_output_runs: number;
+  };
+  latency?: Partial<Record<"local" | "deployed", LatencyRun>>;
+};
+export type EvalResponse = {
+  offline: EvalResults | null;
+  live_grounding: { counts: Partial<Record<GroundingOutcome | "rules_only", number>>; since: string | null };
 };
 
 // ---------- ranking + Why-Not-Me ----------

@@ -1,0 +1,84 @@
+{
+  "simulation": {
+    "measured_at": "2026-11-20T16:50:33+00:00",
+    "method": "Real candidate pools from the database for 7 synthetic profiles (UI role buttons + popular-skill buttons). Each simulation adds one missing skill (every skill present in the pool) or a greedy plan's skill set, then compares Simulator.ranks_with/scores_with against scorer.rank_pool on the extended profile. A simulation agrees when the whole rank order is identical and every score is within 1e-12.",
+    "pool_mode": [
+      "hybrid"
+    ],
+    "jobs_active": 150,
+    "n_profiles": 7,
+    "n_simulations": 1532,
+    "n_agree": 1532,
+    "agreement": 1.0,
+    "n_rank_comparisons": 229800,
+    "rank_mismatches": 0,
+    "max_abs_score_diff": 0.0,
+    "per_profile": {
+      "backend": {
+        "pool_size": 150,
+        "simulations": 218
+      },
+      "frontend": {
+        "pool_size": 150,
+        "simulations": 219
+      },
+      "fullstack": {
+        "pool_size": 150,
+        "simulations": 218
+      },
+      "data": {
+        "pool_size": 150,
+        "simulations": 220
+      },
+      "ml": {
+        "pool_size": 150,
+        "simulations": 219
+      },
+      "devops": {
+        "pool_size": 150,
+        "simulations": 218
+      },
+      "java": {
+        "pool_size": 150,
+        "simulations": 220
+      }
+    },
+    "failures": []
+  },
+  "updated_at": "2026-11-20T16:50:33+00:00",
+  "summary": {
+    "simulation": {
+      "agreement": 1.0,
+      "n_simulations": 1532
+    },
+    "latency": {
+      "local": {
+        "p50_ms": 22.3,
+        "p95_ms": 33.2,
+        "n": 60
+      }
+    }
+  },
+  "latency": {
+    "local": {
+      "measured_at": "2026-11-20T16:48:54+00:00",
+      "method": "20 fixed queries; one untimed warm-up pass (wakes the host, fills the query-embedding cache), then n timed sequential requests spaced 2.1 s apart from one client. Round trip = client wall time for the HTTP request; server = the API's own took_ms (embedding lookup + hybrid SQL). Cached query embeddings, so the embedding API's latency is not included.",
+      "n": 60,
+      "round_trip_ms": {
+        "p50": 22.3,
+        "p95": 33.2,
+        "min": 6.9,
+        "max": 35.0
+      },
+      "server_ms": {
+        "p50": 3.7,
+        "p95": 6.3,
+        "min": 2.2,
+        "max": 8.6
+      },
+      "first_request_ms": 815.1,
+      "degraded_responses": 0,
+      "jobs_active": 150
+    }
+  }
+}

@@ -17,6 +17,8 @@ RUN pip install -r requirements.txt
 COPY backend/app ./app
 COPY backend/migrations ./migrations
 COPY backend/data ./data
+# Measured eval numbers served by /api/eval (the eval scripts themselves are not shipped)
+COPY eval/results.json ./eval/results.json
 
 # Non-root user
 RUN useradd --system --uid 10001 --no-create-home appuser && chown -R appuser /app
